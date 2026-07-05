@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Spotifuck Web
+// @name         SpotiKit
 // @namespace    http://tampermonkey.net/
 // @version      7.0
-// @description  Spotifuck Web — visual mods + AdBlocker for Spotify
+// @description  SpotiKIt — visual premium + AdBlocker for Spotify
 // @author       kit_fogos
 // @match        https://www.spotify.com/*/account/*
 // @match        https://open.spotify.com/*
