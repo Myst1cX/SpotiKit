@@ -23,8 +23,6 @@
 
     if (window.location.hostname === 'open.spotify.com') {
 
-        // === FEATURES FROM v6 (Myst1cX port) ===
-
         let ulFlag = false;
         let ffDone = false;
         let pfint = null;
@@ -266,8 +264,6 @@ aside[data-testid=now-playing-bar]{background:#000!important;box-shadow:none;bor
 
         injectCSS();
         firstFuck();
-
-        // === END v6 FEATURES ===
 
         const isMobileWebPlayer = document.documentElement.classList.contains('mobile-web-player')
             || !!document.querySelector('[data-testid="bottom-tab-navigation"]');
