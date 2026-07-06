@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Spotifuck Web
+// @name         Spotikit++
 // @namespace    http://tampermonkey.net/
 // @version      7.0
-// @description  Spotifuck Web - visual mods + AdBlocker for Spotify
+// @description  Spotikit + adblock + premium spoof + unlock web mobile player likes
 // @author       kit_fogos
 // @match        https://www.spotify.com/*/account/*
 // @match        https://open.spotify.com/*
