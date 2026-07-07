@@ -4,7 +4,7 @@ A JavaScript userscript that customizes the Spotify Web interface.
 
 ## Features
 
-### Desktop (`open.spotify.com`) — v6 features
+### Desktop (`open.spotify.com`)
 - Ad blocking (ads, banners, download prompts)
 - AMOLED pure black mode (`--background-base: #000`)
 - Library sidebar toggle (expand/collapse with fullscreen overlay)
@@ -37,7 +37,7 @@ A JavaScript userscript that customizes the Spotify Web interface.
 - Hide "Open in Desktop App" elements
 - Hide Premium navigation links
 
-# SpotiKit++ Mobile Desktop
+# SpotiKit++ Mobile Desktop 7.1
 
 A Tampermonkey userscript that transforms [open.spotify.com](https://open.spotify.com) into a **mobile**-style interface on your desktop. It includes a bottom navigation bar, a library overlay, a compact player, a Premium spoof, and ad blocking.
 
