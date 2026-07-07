@@ -37,6 +37,35 @@ A JavaScript userscript that customizes the Spotify Web interface.
 - Hide "Open in Desktop App" elements
 - Hide Premium navigation links
 
+# SpotiKit++ Mobile Desktop
+
+A Tampermonkey userscript that transforms [open.spotify.com](https://open.spotify.com) into a **mobile**-style interface on your desktop. It includes a bottom navigation bar, a library overlay, a compact player, a Premium spoof, and ad blocking.
+
+---
+
+## Installation
+
+1. Install [Tampermonkey](https://www.tampermonkey.net/) in your browser (Chrome, Edge, Firefox, Opera).
+2. Click on [`SpotiKitMobileDesktop.js`](SpotiKitMobileDesktop.js) and then on **Raw** (or copy the content manually).
+3. Tampermonkey will open the installation page → click **Install**.
+4. Go to [open.spotify.com](https://open.spotify.com) and reload the page.
+
+## Features
+
+### Mobile Interface
+- **Bottom navigation bar** with Home, Search, and Library tabs.
+- **Library** as a full-screen overlay (with no visible sidebar).
+- **Compact player** with album art, like, skip, and play/pause buttons.
+- Thin progress bar at the top edge of the player.
+- Home button hidden in Search and Library.
+
+
+### Mobile DOM Hacks
+- Synchronization with the sidebar (sidebar toggle without conflicts with React).
+- Automatic closing of the playback panel when navigating.
+- Extraction of official Spotify SVGs from the DOM.
+
+
 ## Notes
 
 - Client-side JavaScript only.
