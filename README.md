@@ -21,8 +21,7 @@ A JavaScript userscript that customizes the Spotify Web interface.
 - **Right sidebar (Now Playing) visible** but selectively collapsed — hides close button, artist bio, and credits; keeps the **queue list** visible
 - **Auto-closes Now Playing panel** when it opens on song play (MutationObserver)
 - Official Spotify SVGs extracted from the DOM for the bottom nav icons
-- Ad blocking (banners, download prompts, upsells)
-- Hide Premium upgrade buttons, fullscreen mode button, tooltips, mobile upsells, consent dialogs
+- Ad blocking (CSS-only, no audio/video manipulation)
 
 ### Premium Spoof & Page Blockers (`spotify.com/account/*`, payments, etc.)
 - Text replacements (e.g. "Spotify Free" → "Premium Individual", "Shuffle play" → "Play any song")
@@ -31,6 +30,10 @@ A JavaScript userscript that customizes the Spotify Web interface.
 - Payment page blocker — replaces `payments.spotify.com` with "don't waste your money" message
 - Disable payment forms and checkout buttons
 - Hide download/install app prompts, "Open in Desktop App" elements, and Premium navigation links
+
+## Credits
+
+Ad blocking adapted from [Spotifuck](https://github.com/Myst1cX/spotifuck-userscript) by Myst1cX.
 
 ## Notes
 
