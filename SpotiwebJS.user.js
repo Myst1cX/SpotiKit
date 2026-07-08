@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SpotiKit++ desktop
 // @namespace    https://github.com/Myst1cX/SpotiKit
-// @version      7.1.fork
+// @version      7.0.fork
 // @description  SpotiKit — visual premium UI overlay for Spotify and ad banner blocking
 // @author       kit_fogos
 // @match        https://www.spotify.com/*/account/*
@@ -19,7 +19,7 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.js
 // ==/UserScript==
 
-// RESOLVED (7.1.fork, Myst1cX):
+// RESOLVED (7.0.fork, Myst1cX):
 // Added proper linking for installing the script via an userscript manager 
 // Removed obsolete function that attempted to intercept and block audio ads. 
 
