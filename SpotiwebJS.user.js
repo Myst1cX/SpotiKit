@@ -20,6 +20,7 @@
 // ==/UserScript==
 
 // RESOLVED (7.1.fork, Myst1cX):
+// Added proper linking for installing the script via an userscript manager 
 // Removed obsolete function that attempted to intercept and block audio ads. 
 
 (function() {
