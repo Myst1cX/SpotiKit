@@ -13,10 +13,11 @@
 // @match        https://payments.spotify.com/*
 // @grant        GM_addStyle
 // @run-at       document-idle
-// @downloadURL https://raw.githubusercontent.com/kitbodega/SpotiKit/refs/heads/main/SpotiKitMobileDesktop.js
-// @updateURL   https://raw.githubusercontent.com/kitbodega/SpotiKit/refs/heads/main/SpotiKitMobileDesktop.js
-// @supportURL  https://github.com/kitbodega/SpotiKit/issues
-// @icon        https://i.ibb.co/YF1nLPfK/2eca7229-ca6a-4ad6-8653-b80a6a0f8586.png
+// @homepageURL  https://github.com/Myst1cX/SpotiKit
+// @supportURL   https://github.com/Myst1cX/SpotiKit/issues
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js
+// @icon         https://i.ibb.co/YF1nLPfK/2eca7229-ca6a-4ad6-8653-b80a6a0f8586.png
 // ==/UserScript==
 
 (function() {
