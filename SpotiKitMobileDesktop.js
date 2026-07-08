@@ -18,7 +18,6 @@
 // @supportURL  https://github.com/kitbodega/SpotiKit/issues
 // @icon        https://i.ibb.co/YF1nLPfK/2eca7229-ca6a-4ad6-8653-b80a6a0f8586.png
 // ==/UserScript==
-// Ad blocking adapted from Spotifuck — https://github.com/Myst1cX/spotifuck-userscript
 
 (function() {
     'use strict';
@@ -958,10 +957,6 @@ ul.oPf3qKGRkUM3T0bK{
     }
 
     setTimeout(run, 300);
-    // Ad blocking adapted from Spotifuck (https://github.com/Myst1cX/spotifuck-userscript)
-    // Uses CSS-only approach: ad banners are hidden via injectMobileCSS()
-    // No audio/video manipulation — safe, non-breaking ad blocking
-
     setTimeout(run, 2000);
 
 })();
