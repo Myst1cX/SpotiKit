@@ -6,7 +6,7 @@ A JavaScript userscript that customizes the Spotify Web interface.
 
 1. Install [Tampermonkey](https://www.tampermonkey.net/) (Brave).
 2. Click the raw link below — Tampermonkey will open the install dialog:
-   - **https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitMobileDesktop.js**
+   - **https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitMobileDesktop.user.js**
 3. Click **Install**.
 4. Go to [open.spotify.com](https://open.spotify.com) and reload.
 
