@@ -56,10 +56,8 @@
 
 // Fourth big change:
 // Added two independent userscript-manager menu toggles (via
-// GM_registerMenuCommand + GM_setValue/GM_getValue) that were supposed to
-// ship with the premium spoof but never actually got added - the spoof was
-// running unconditionally with no way to turn it off. One toggle covers
-// open.spotify.com, the other covers www.spotify.com/payments.spotify.com,
+// GM_registerMenuCommand + GM_setValue/GM_getValue). One toggle covers
+// open.spotify.com, the other covers www.spotify.com (plan payment pages),
 // each independent and GM-storage-backed, both enabled by default. 
 // Added the missing @grant GM_setValue / @grant GM_getValue lines these need.
 // Also fixed forceEnglish(): it previously only spoofed
