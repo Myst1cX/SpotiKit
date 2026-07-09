@@ -13,6 +13,8 @@
 // @match        https://payments.spotify.com/*
 // @grant        GM_addStyle
 // @grant        GM_registerMenuCommand
+// @grant        GM_setValue
+// @grant        GM_getValue
 // @run-at       document-idle
 // @homepageURL  https://github.com/Myst1cX/SpotiKit
 // @supportURL   https://github.com/Myst1cX/SpotiKit/issues
@@ -51,6 +53,60 @@
 // "Descarga canciones..." string check — they're dead weight now.
 // Updated the two hardcoded account-page redirect URLs from /mx/ to /us/
 // to match.
+
+// Fourth big change:
+// Added two independent userscript-manager menu toggles (via
+// GM_registerMenuCommand + GM_setValue/GM_getValue) that were supposed to
+// ship with the premium spoof but never actually got added - the spoof was
+// running unconditionally with no way to turn it off. One toggle covers
+// open.spotify.com, the other covers www.spotify.com/payments.spotify.com,
+// each independent and GM-storage-backed, both enabled by default. 
+// Added the missing @grant GM_setValue / @grant GM_getValue lines these need.
+// Also fixed forceEnglish(): it previously only spoofed
+// navigator.language/languages and redirected non-English www.spotify.com
+// paths, both of which only affect a single page load. It never touched
+// the account-level language setting saved server-side at
+// open.spotify.com/preferences, which is what actually drives the English
+// aria-labels (e.g. "Open Your Library") this script's selectors depend
+// on. Added forceEnglishAccountSetting(), which flips that setting to
+// English via a hidden iframe, verifies the flip stuck on the next load,
+// and retries a capped number of times if it didn't.
+
+// --- Per-site visual premium spoof toggles ---
+// Declared at module scope (not inside either IIFE below) because both the
+// text/badge-spoof IIFE and the separate ad-slot-removal IIFE need to read
+// premiumSpoofEnabledHere() - it's the single switch that gates both.
+// Mirrors Spotifuck v6.6's split: the in-player spoof (open.spotify.com)
+// and the account-site/payments spoof (www.spotify.com, payments.spotify.com)
+// are independent, GM-storage-backed, and default to enabled.
+const SPOOF_OPEN_KEY = 'spotiweb_premSpoofOpen';
+const SPOOF_WWW_KEY = 'spotiweb_premSpoofWWW';
+const HOST_IS_OPEN = location.hostname === 'open.spotify.com';
+const HOST_IS_WWW = location.hostname === 'www.spotify.com' || location.hostname === 'payments.spotify.com';
+
+function getFlag(key) {
+    try { return typeof GM_getValue === 'function' ? GM_getValue(key, true) : true; }
+    catch (e) { return true; }
+}
+function setFlag(key, val) {
+    try { if (typeof GM_setValue === 'function') GM_setValue(key, val); } catch (e) {}
+}
+function premiumSpoofEnabledHere() {
+    if (HOST_IS_OPEN) return getFlag(SPOOF_OPEN_KEY);
+    if (HOST_IS_WWW) return getFlag(SPOOF_WWW_KEY);
+    return false;
+}
+
+if (typeof GM_registerMenuCommand === 'function') {
+    GM_registerMenuCommand(
+        (getFlag(SPOOF_OPEN_KEY) ? '✅' : '❌') + ' Visual Premium Spoof (open.spotify.com)',
+        () => { setFlag(SPOOF_OPEN_KEY, !getFlag(SPOOF_OPEN_KEY)); location.reload(); }
+    );
+    GM_registerMenuCommand(
+        (getFlag(SPOOF_WWW_KEY) ? '✅' : '❌') + ' Visual Premium Spoof (www.spotify.com)',
+        () => { setFlag(SPOOF_WWW_KEY, !getFlag(SPOOF_WWW_KEY)); location.reload(); }
+    );
+}
 
 (function() {
     'use strict';
@@ -149,7 +205,187 @@
             const m = location.pathname.match(/^\/([a-z]{2})(\/.*)?$/i);
             if (m && !ENGLISH_REGIONS.includes(m[1].toLowerCase())) {
                 location.replace(location.origin + '/us' + (m[2] || '/') + location.search + location.hash);
+                return;
             }
+        }
+
+        if (location.hostname === 'open.spotify.com') {
+            const m2 = location.pathname.match(/^\/intl-([a-z]{2})(\/.*)?$/i);
+            if (m2 && m2[1].toLowerCase() !== 'en') {
+                location.replace(location.origin + (m2[2] || '/') + location.search + location.hash);
+                return;
+            }
+            forceEnglishAccountSetting();
+        }
+    }
+
+    /**
+     * forceEnglishAccountSetting - Flip the account-level language preference
+     * (open.spotify.com/preferences, <select id="desktop.settings.selectLanguage">)
+     * to "en". navigator.language and the /intl-xx/ URL prefix above only
+     * affect this one page load - the aria-labels Spotify actually renders
+     * (e.g. "Open Your Library") are driven by this account setting, which is
+     * saved server-side. Ported from Spotifuck v6.5, since without it,
+     * anything in this script keyed off an English aria-label
+     * (e.g. the "Collapse Your Library" checks) silently stops matching for
+     * any account not already set to English.
+     */
+    function forceEnglishAccountSetting() {
+        const PENDING_KEY = 'spotiwebEnglishFlipPending';
+        const ATTEMPTS_KEY = 'spotiwebEnglishFlipAttempts';
+        const MAX_ATTEMPTS = 3;
+
+        if (window.top !== window.self) return;
+
+        const verifying = localStorage.getItem(PENDING_KEY) === 'true';
+        if (verifying) localStorage.removeItem(PENDING_KEY);
+
+        const withPreferencesDoc = (callback) => {
+            let settled = false;
+            const fire = (doc, cleanup) => {
+                if (settled) return;
+                settled = true;
+                callback(doc, cleanup);
+            };
+
+            if (location.pathname.startsWith('/preferences')) {
+                fire(document, () => {});
+                return;
+            }
+
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = 'https://open.spotify.com/preferences';
+            (document.documentElement || document.body).appendChild(iframe);
+
+            let removed = false;
+            const cleanup = () => {
+                if (removed) return;
+                removed = true;
+                iframe.remove();
+            };
+
+            iframe.addEventListener('load', () => {
+                try {
+                    fire(iframe.contentDocument, cleanup);
+                } catch (e) {
+                    console.log('SpotiwebJS: could not access preferences iframe', e);
+                    cleanup();
+                    fire(null, cleanup);
+                }
+            });
+
+            setTimeout(() => { cleanup(); fire(null, cleanup); }, 15000);
+        };
+
+        const giveUp = (reason) => {
+            console.log('SpotiwebJS: ' + reason + ' - not retrying automatically');
+        };
+
+        const attemptFlip = () => {
+            withPreferencesDoc((doc, cleanup) => {
+                if (!doc) { cleanup(); giveUp('could not load preferences document'); return; }
+                applyEnglishToLanguageSelect(doc, (result) => {
+                    if (!result.found) {
+                        cleanup();
+                        giveUp('language selector not found - Spotify may have changed the settings page');
+                        return;
+                    }
+                    if (!result.changed) {
+                        cleanup();
+                        localStorage.removeItem(ATTEMPTS_KEY);
+                        console.log('SpotiwebJS: account language already English - no reload needed');
+                        return;
+                    }
+                    localStorage.setItem(PENDING_KEY, 'true');
+                    console.log('SpotiwebJS: dispatched English change - reloading to verify it saved');
+                    setTimeout(() => { cleanup(); location.reload(); }, 1000);
+                });
+            });
+        };
+
+        if (!verifying) {
+            attemptFlip();
+            return;
+        }
+
+        withPreferencesDoc((doc, cleanup) => {
+            if (!doc) { cleanup(); giveUp('could not reload preferences document to verify'); return; }
+            applyEnglishToLanguageSelect(doc, (result) => {
+                cleanup();
+                if (result.found && result.value === 'en') {
+                    localStorage.removeItem(ATTEMPTS_KEY);
+                    console.log('SpotiwebJS: verified account language is now English');
+                    return;
+                }
+                if (!result.found) {
+                    giveUp('language selector not found during verification - Spotify may have changed the settings page');
+                    return;
+                }
+                const attempts = parseInt(localStorage.getItem(ATTEMPTS_KEY) || '0', 10) + 1;
+                if (attempts >= MAX_ATTEMPTS) {
+                    giveUp('English flip did not stick after ' + attempts + ' attempt(s) - clear localStorage "' + ATTEMPTS_KEY + '" to retry');
+                    return;
+                }
+                localStorage.setItem(ATTEMPTS_KEY, String(attempts));
+                console.log('SpotiwebJS: flip did not stick yet, retrying (' + attempts + '/' + MAX_ATTEMPTS + ')');
+                attemptFlip();
+            }, { readOnly: true });
+        });
+    }
+
+    /**
+     * applyEnglishToLanguageSelect - Read or set the given document's language
+     * <select>. In write mode it flips the value to "en" and dispatches a
+     * real change event so Spotify's React handler picks it up. In read-only
+     * mode it just reports the current value.
+     */
+    function applyEnglishToLanguageSelect(doc, onDone, { readOnly = false } = {}) {
+        let settled = false;
+        const resolve = (result) => {
+            if (settled) return;
+            settled = true;
+            onDone(result);
+        };
+
+        const trySelect = () => {
+            const select = doc.getElementById('desktop.settings.selectLanguage');
+            if (!select) return false;
+
+            if (readOnly || select.value === 'en') {
+                resolve({ found: true, value: select.value, changed: false });
+                return true;
+            }
+
+            const win = doc.defaultView || window;
+            const nativeSetter = Object.getOwnPropertyDescriptor(win.HTMLSelectElement.prototype, 'value').set;
+            nativeSetter.call(select, 'en');
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+
+            console.log('SpotiwebJS: dispatched English change on language selector');
+            resolve({ found: true, value: 'en', changed: true });
+            return true;
+        };
+
+        if (trySelect()) return;
+
+        const win = doc.defaultView || window;
+        const startObserving = () => {
+            if (trySelect()) return;
+            const observer = new win.MutationObserver(() => {
+                if (trySelect()) observer.disconnect();
+            });
+            observer.observe(doc.body, { childList: true, subtree: true });
+            setTimeout(() => {
+                observer.disconnect();
+                resolve({ found: false, value: null, changed: false });
+            }, 12000);
+        };
+
+        if (doc.body) {
+            startObserving();
+        } else {
+            doc.addEventListener('DOMContentLoaded', startObserving, { once: true });
         }
     }
 
@@ -376,8 +612,18 @@
 
     forceEnglish();
 
-    setTimeout(() => { scanText(document.body); run(); }, 300);
-    setTimeout(() => { scanText(document.body); run(); }, 1200);
+    // Single gated entry point: both the timed passes below and the mutation
+    // observer funnel through this so premiumSpoofEnabledHere() is the one
+    // switch that turns the whole spoof pass on/off for the current host.
+    function premiumPass(changedRoot) {
+        if (!premiumSpoofEnabledHere()) return;
+        if (changedRoot) scanText(changedRoot);
+        else scanText(document.body);
+        run();
+    }
+
+    setTimeout(() => premiumPass(document.body), 300);
+    setTimeout(() => premiumPass(document.body), 1200);
 
     let timer;
     let pendingNodes = new Set();
@@ -385,6 +631,7 @@
     let mainObserver = null;
 
     function handleMutations(mutations) {
+        if (!premiumSpoofEnabledHere()) return;
         for (const m of mutations) {
             if (m.type === 'childList') {
                 m.addedNodes.forEach(node => {
@@ -437,6 +684,7 @@
     };
 
     const observer = new MutationObserver(() => {
+        if (!premiumSpoofEnabledHere()) return;
         removeElements('[data-testid="ad-slot-container"], [class*="ad-"]');
         removeElements('.ButtonInner-sc-14ud5tc-0.fcsOIN');
     });
