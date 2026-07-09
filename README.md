@@ -23,7 +23,7 @@ w
 > Removes ad-slot-container elements from the DOM. Cosmetic only.   
 > Doesn't touch the actual audio ad requests (see [Ad-Blocking (actual audio ads)](https://github.com/Myst1cX/SpotiKit/blob/main/README.md#ad-blocking-actual-audio-ads) below for that.
 >
-> **CHANGE LOGGING**  
+> **LOGGING OF TEXT NODE SWAPS**  
 > Every text swap gets logged. A "📋 Show everything replaced so far" menu command dumps it as a table in the console.
 >
 > **EFFICIENT SCANNING**  
