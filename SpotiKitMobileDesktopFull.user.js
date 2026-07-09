@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SpotiKit MobileDesktop Full (including visual premium spoof & payment page blockers)
+// @name         SpotiKit MobileDesktop
 // @namespace    https://github.com/kitbodega/SpotiKit
 // @version      7.3.1.fork
 // @description  SpotiKit — Mobile‑like layout for Spotify Web. Floating player, bottom nav, library overlay, and more.
@@ -13,6 +13,9 @@
 // @match        https://www.spotify.com/*/family/*
 // @match        https://payments.spotify.com/*
 // @grant        GM_addStyle
+// @grant        GM_registerMenuCommand
+// @grant        GM_setValue
+// @grant        GM_getValue
 // @run-at       document-start
 // @homepageURL  https://github.com/Myst1cX/SpotiKit
 // @supportURL   https://github.com/Myst1cX/SpotiKit/issues
@@ -39,17 +42,78 @@
 // Restricted the mobile bottom nav bar (Home/Search/Library) and its CSS to only load on open.spotify.com, 
 // so it stops appearing on other spotify.com pages like the account/premium sections.
 
+// Fourth batch:
+// a) Fixed forceEnglish() to also redirect www.spotify.com off non-English region path segments (e.g. /mx/ -> /us/),
+// matching the fix already present on open.spotify.com. Previously only the open.spotify.com /intl-xx/ prefix was
+// stripped, so www.spotify.com account/premium pages could still render in a non-English region path.
+// b) Removed the old Spanish-language selectors/regex left over from before forceEnglish reliably forced English:
+// the "obtener|conseguir" and "explorar|ver|planes" branches of the button-relabeling regexes, the Spanish
+// "Planes Premium" XPath/aria-label selectors, the "abrir en...|instalar|descargar..." branch of the
+// desktop-app-hiding regex, and the Spanish "Descarga canciones..." string match.
+// c) Reworked runPremium()'s text-swap pass so it no longer does a blind full document.body walk on a timer.
+// It's now MutationObserver-driven: scanText()/applyReplacements() only re-scan nodes that actually changed,
+// batched and debounced (400ms) via handlePremiumMutations(), falling back to a full-body scan only if more
+// than 20 nodes changed in one batch. Every swap is now logged (selector, before/after text, times applied)
+// via logChange(), viewable through a new "Show everything replaced so far" userscript menu command.
+// d) Added two independent userscript-manager menu toggles (via GM_registerMenuCommand + GM_setValue/GM_getValue),
+// since the spoof behaves differently depending on which site it's touching:
+// 1. "Visual Premium Spoof (open.spotify.com)" - the in-player text/badge relabeling and account widgets
+// that render inside the web player.
+// 2. "Visual Premium Spoof (www.spotify.com)" - the account site (spotify.com /premium, /duo, /student,
+// /family, purchase pages) and the payments.spotify.com blockers/redirects.
+// Each toggle is independent, persists via GM storage, and reloads the page to apply. Both are enabled by default.
+// Added the matching @grant lines (GM_registerMenuCommand, GM_setValue, GM_getValue) needed for the above.
+
 (function() {
     'use strict';
 
     const PINK = '#FFD2D7';
     const GREEN = '#1ed760';
 
+    // --- Per-site visual premium spoof toggles (Fourth batch) ---
+    const SPOOF_OPEN_KEY = 'spotikitPremSpoofOpen';
+    const SPOOF_WWW_KEY = 'spotikitPremSpoofWWW';
+    const HOST_IS_OPEN = location.hostname === 'open.spotify.com';
+    const HOST_IS_WWW = location.hostname === 'www.spotify.com' || location.hostname === 'payments.spotify.com';
+
+    function getFlag(key) {
+        try { return typeof GM_getValue === 'function' ? GM_getValue(key, true) : true; }
+        catch (e) { return true; }
+    }
+    function setFlag(key, val) {
+        try { if (typeof GM_setValue === 'function') GM_setValue(key, val); } catch (e) {}
+    }
+    function premiumSpoofEnabledHere() {
+        if (HOST_IS_OPEN) return getFlag(SPOOF_OPEN_KEY);
+        if (HOST_IS_WWW) return getFlag(SPOOF_WWW_KEY);
+        return false;
+    }
+
+    if (typeof GM_registerMenuCommand === 'function') {
+        GM_registerMenuCommand(
+            (getFlag(SPOOF_OPEN_KEY) ? '\u2705' : '\u274c') + ' Visual Premium Spoof (open.spotify.com)',
+            () => { setFlag(SPOOF_OPEN_KEY, !getFlag(SPOOF_OPEN_KEY)); location.reload(); }
+        );
+        GM_registerMenuCommand(
+            (getFlag(SPOOF_WWW_KEY) ? '\u2705' : '\u274c') + ' Visual Premium Spoof (www.spotify.com)',
+            () => { setFlag(SPOOF_WWW_KEY, !getFlag(SPOOF_WWW_KEY)); location.reload(); }
+        );
+    }
+
     function forceEnglish() {
         try {
             Object.defineProperty(navigator, 'language', { get: () => 'en-US', configurable: true });
             Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'], configurable: true });
         } catch (e) {}
+
+        if (location.hostname === 'www.spotify.com') {
+            const ENGLISH_REGIONS = ['us', 'gb', 'ca', 'au', 'ie', 'nz'];
+            const wm = location.pathname.match(/^\/([a-z]{2})(\/.*)?$/i);
+            if (wm && !ENGLISH_REGIONS.includes(wm[1].toLowerCase())) {
+                location.replace(location.origin + '/us' + (wm[2] || '/') + location.search + location.hash);
+                return;
+            }
+        }
 
         const m = location.pathname.match(/^\/intl-([a-z]{2})(\/.*)?$/i);
         if (m && m[1].toLowerCase() !== 'en') {
@@ -900,22 +964,43 @@ ul.oPf3qKGRkUM3T0bK{display:block!important;overflow-y:auto!important}
         "Limited skips": "Unlimited skips",
         "Free plan": "Premium Individual",
     };
-    function runPremium() {
-        const b = document.body;
-        if (!b) return;
-        const w = document.createTreeWalker(b, NodeFilter.SHOW_TEXT, null, false);
-        let n;
-        while (n = w.nextNode()) {
-            let v = n.nodeValue;
-            let c = false;
-            for (const [from, to] of Object.entries(REPLACE)) {
-                if (v.includes(from)) {
-                    v = v.replaceAll(from, to);
-                    c = true;
-                }
-            }
-            if (c) n.nodeValue = v;
+
+    const replacementLog = new Map();
+    function logChange(selector, from, to) {
+        const key = `${selector}\u0000${from}\u0000${to}`;
+        const existing = replacementLog.get(key);
+        if (existing) existing.times_applied++;
+        else replacementLog.set(key, { selector, old_text: from, new_text: to, times_applied: 1 });
+    }
+    function printReplacementLog() {
+        if (replacementLog.size === 0) {
+            console.log('[SpotiKit] Nothing has been replaced yet.');
+            return;
         }
+        console.log(`[SpotiKit] ${replacementLog.size} distinct change(s) made so far:`);
+        console.table(Array.from(replacementLog.values()));
+    }
+    function applyReplacements(node) {
+        let v = node.nodeValue;
+        if (v == null) return;
+        let c = false;
+        for (const [from, to] of Object.entries(REPLACE)) {
+            if (v.includes(from)) {
+                v = v.replaceAll(from, to);
+                c = true;
+                logChange('(page text)', from, to);
+            }
+        }
+        if (c) node.nodeValue = v;
+    }
+    function scanText(root) {
+        if (!root) return;
+        const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+        let n;
+        while (n = w.nextNode()) applyReplacements(n);
+    }
+
+    function runPremium() {
         document.querySelectorAll('.encore-text-title-medium, [class*="title-medium"]').forEach(el => {
             if ((el.textContent || '').trim() === 'Premium Individual') {
                 el.style.color = window.location.href.includes('/subscription/manage/') ? '#000' : PINK;
@@ -943,24 +1028,32 @@ ul.oPf3qKGRkUM3T0bK{display:block!important;overflow-y:auto!important}
         document.querySelectorAll('h1, h2, h3, h4, strong, span, div[class*="plan"], div[class*="Plan"]').forEach(el => {
             const t = (el.textContent || '').trim();
             if (t === 'Free' || t === 'Spotify Free' || t === 'Free plan') {
+                logChange('h1,h2,h3,h4,strong,span,div[class*="plan"]', t, 'Premium Individual');
                 el.textContent = 'Premium Individual';
                 el.style.color = PINK;
                 el.style.fontWeight = '700';
             }
         });
         document.querySelectorAll('a, button, [role="button"]').forEach(el => {
-            const t = (el.innerText || el.textContent || '').trim().toLowerCase();
-            if (/^(get|buy|join|obtener|conseguir)\s*premium/.test(t)) {
+            const orig = (el.innerText || el.textContent || '').trim();
+            const t = orig.toLowerCase();
+            if (/^(get|buy|join)\s*premium/.test(t)) {
+                logChange('a, button, [role="button"]', orig, 'DONT JOIN PREMIUM');
                 el.textContent = 'DONT JOIN PREMIUM';
                 el.style.cssText += `background:${PINK}!important;color:#000!important;border:none!important;border-radius:20px!important;font-weight:700!important;pointer-events:none!important;cursor:default!important;`;
                 el.onclick = e => { e.preventDefault(); e.stopPropagation(); };
             }
-            if (/^(explore|view|explorar|ver)\s*(plans|planes)/.test(t)) {
+            if (/^(explore|view)\s*plans/.test(t)) {
+                logChange('a, button, [role="button"]', orig, 'Manage plan');
                 el.textContent = 'Manage plan';
                 el.style.cssText += `background:transparent!important;color:#fff!important;border:1px solid #727272!important;border-radius:20px!important;font-weight:700!important;pointer-events:none!important;cursor:default!important;`;
                 el.onclick = e => { e.preventDefault(); e.stopPropagation(); };
             }
-            if (/^(try|pru[eé]ba)/.test(t)) el.style.display = 'none';
+            if (/^try/.test(t) && !el.dataset.spDone) {
+                logChange('a, button, [role="button"]', orig, '(hidden)');
+                el.style.display = 'none';
+                el.dataset.spDone = '1';
+            }
         });
         document.querySelectorAll('[class*="badge"], [class*="Badge"]').forEach(el => {
             if (/^free$/i.test(el.textContent.trim())) {
@@ -972,34 +1065,45 @@ ul.oPf3qKGRkUM3T0bK{display:block!important;overflow-y:auto!important}
         document.querySelectorAll('table').forEach(tbl => {
             tbl.querySelectorAll('td, th').forEach(cell => {
                 const t = cell.textContent.trim().toLowerCase();
-                if (!t || t === '\u2014' || t === '-' || t === 'no' || /gratuito|free/.test(t)) {
+                if (!t || t === '\u2014' || t === '-' || t === 'no' || /free/.test(t)) {
+                    logChange('table td, th', t || '(empty)', '\u2713');
                     cell.innerHTML = `<span style="color:${GREEN};font-weight:700;">\u2713</span>`;
                 }
             });
         });
         document.querySelectorAll('span[data-encore-id="text"]').forEach(el => {
             const t = el.textContent.trim();
-            if (t === 'Download for offline listening' || t === 'Descarga canciones para disfrutarlas sin conexi\u00f3n' || t === 'Descarga canciones para disfrutarlas sin conexi n') {
+            if (t === 'Download for offline listening') {
+                logChange('span[data-encore-id="text"]', t, 'Spotify wont fuck you');
                 el.textContent = 'Spotify wont fuck you';
             }
         });
-        const upgradeBtn = document.querySelector('[data-testid="upgrade-button"]');
-        if (upgradeBtn) upgradeBtn.style.display = 'none';
-        const installBtn = document.querySelector('a[href="/download"]');
-        if (installBtn) installBtn.style.display = 'none';
-        const premiumMenu = document.querySelector('a[href*="premium/?ref=web_loggedin_upgrade_menu"]');
-        if (premiumMenu) premiumMenu.style.display = 'none';
+        const upgradeBtn = document.querySelector('[data-testid="upgrade-button"]:not([data-sp-done])');
+        if (upgradeBtn) { logChange('[data-testid="upgrade-button"]', upgradeBtn.textContent.trim(), '(hidden)'); upgradeBtn.style.display = 'none'; upgradeBtn.dataset.spDone = '1'; }
+        const installBtn = document.querySelector('a[href="/download"]:not([data-sp-done])');
+        if (installBtn) { logChange('a[href="/download"]', 'install app link', '(hidden)'); installBtn.style.display = 'none'; installBtn.dataset.spDone = '1'; }
+        const premiumMenu = document.querySelector('a[href*="premium/?ref=web_loggedin_upgrade_menu"]:not([data-sp-done])');
+        if (premiumMenu) { logChange('a[href*="premium/?ref=web_loggedin_upgrade_menu"]', premiumMenu.textContent.trim(), '(hidden)'); premiumMenu.style.display = 'none'; premiumMenu.dataset.spDone = '1'; }
         const planesXpath = document.evaluate(
-            '//a[text()="Planes Premium"] | //span[text()="Planes Premium"] | //div[text()="Planes Premium"] | //a[text()="Premium Plans"] | //span[text()="Premium Plans"] | //div[text()="Premium Plans"]',
+            '//a[text()="Premium Plans"] | //span[text()="Premium Plans"] | //div[text()="Premium Plans"]',
             document, null, XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null
         );
         for (let i = 0; i < planesXpath.snapshotLength; i++) {
             const n = planesXpath.snapshotItem(i);
-            if (n) n.style.display = 'none';
+            if (n && n.nodeType === 1 && !n.dataset.spDone) {
+                logChange('(xpath) Premium Plans text', n.textContent.trim(), '(hidden)');
+                n.style.display = 'none';
+                n.dataset.spDone = '1';
+            }
         }
-        document.querySelectorAll('[aria-label*="Planes Premium"], [aria-label*="Premium Plans"], [data-ga-action="premium"], [data-ga-category="menu"] a, a[href*="/premium/"]').forEach(el => {
+        document.querySelectorAll('[aria-label*="Premium Plans"], [data-ga-action="premium"], [data-ga-category="menu"] a, a[href*="/premium/"]').forEach(el => {
+            if (el.dataset.spDone) return;
             const t = el.textContent.trim();
-            if (t === 'Planes Premium' || t === 'Premium Plans') el.style.display = 'none';
+            if (t === 'Premium Plans') {
+                logChange('[aria-label*="Premium Plans"] / [data-ga-action="premium"] / a[href*="/premium/"]', t, '(hidden)');
+                el.style.display = 'none';
+                el.dataset.spDone = '1';
+            }
         });
         const DESKTOP_SELECTORS = [
             '[data-testid="open-in-app-button"]',
@@ -1019,7 +1123,7 @@ ul.oPf3qKGRkUM3T0bK{display:block!important;overflow-y:auto!important}
         });
         document.querySelectorAll('a, button, [role="button"]').forEach(el => {
             const t = (el.textContent || '').trim().toLowerCase();
-            if (/open (in|the) (app|desktop|spotify)|install|download (the )?app|get the app|launch|listen in app|listen on desktop|use (the )?(app|desktop)|abrir en (la )?(aplicaci[óo]n|app)|abrir en ordenador|instalar|descargar (la )?app/.test(t)) {
+            if (/open (in|the) (app|desktop|spotify)|install|download (the )?app|get the app|launch|listen in app|listen on desktop|use (the )?(app|desktop)/.test(t)) {
                 el.style.display = 'none';
             }
         });
@@ -1087,6 +1191,69 @@ ul.oPf3qKGRkUM3T0bK{display:block!important;overflow-y:auto!important}
             window.location.replace('https://open.spotify.com/');
         }
     }
-    setTimeout(runPremium, 300);
-    setTimeout(runPremium, 2000);
+
+    // Single gated entry point: both the timed passes below and the mutation
+    // observer funnel through this so premiumSpoofEnabledHere() is the one
+    // switch that turns the whole spoof pass on/off for the current host.
+    function premiumPass(changedRoot) {
+        if (!premiumSpoofEnabledHere()) return;
+        if (changedRoot) scanText(changedRoot);
+        else scanText(document.body);
+        runPremium();
+    }
+
+    setTimeout(() => premiumPass(document.body), 300);
+    setTimeout(() => premiumPass(document.body), 2000);
+
+    let premTimer;
+    let pendingNodes = new Set();
+    let pendingTextNodes = new Set();
+    let premiumObserver = null;
+
+    function handlePremiumMutations(mutations) {
+        if (!premiumSpoofEnabledHere()) return;
+        for (const m of mutations) {
+            if (m.type === 'childList') {
+                m.addedNodes.forEach(node => {
+                    if (node.nodeType === 1) pendingNodes.add(node);
+                });
+            } else if (m.type === 'characterData') {
+                pendingTextNodes.add(m.target);
+            }
+        }
+        clearTimeout(premTimer);
+        premTimer = setTimeout(() => {
+            if (pendingNodes.size > 0 && pendingNodes.size <= 20) {
+                pendingNodes.forEach(node => scanText(node));
+            } else if (pendingNodes.size > 20) {
+                scanText(document.body);
+            }
+            pendingNodes.clear();
+            pendingTextNodes.forEach(node => applyReplacements(node));
+            pendingTextNodes.clear();
+            runPremium();
+        }, 400);
+    }
+
+    function startPremiumObserver() {
+        if (premiumObserver) premiumObserver.disconnect();
+        premiumObserver = new MutationObserver(handlePremiumMutations);
+        premiumObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+        });
+    }
+    if (document.body) {
+        startPremiumObserver();
+    } else {
+        document.addEventListener('DOMContentLoaded', startPremiumObserver, { once: true });
+    }
+
+    if (typeof GM_registerMenuCommand === 'function') {
+        GM_registerMenuCommand('\ud83d\udccb Show everything replaced so far (console)', () => {
+            printReplacementLog();
+            alert('Current text replacements have been logged to the console. Open DevTools (Press F12 or Right click and Inspect), then select the Logs tab under Console to view it.');
+        });
+    }
 })();
