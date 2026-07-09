@@ -13,6 +13,9 @@
 // @match        https://www.spotify.com/*/family/*
 // @match        https://payments.spotify.com/*
 // @grant        GM_addStyle
+// @grant        GM_registerMenuCommand
+// @grant        GM_setValue
+// @grant        GM_getValue
 // @run-at       document-start
 // @homepageURL  https://github.com/Myst1cX/SpotiKit
 // @supportURL   https://github.com/Myst1cX/SpotiKit/issues
@@ -39,11 +42,40 @@
 // Restricted the mobile bottom nav bar (Home/Search/Library) and its CSS to only load on open.spotify.com, 
 // so it stops appearing on other spotify.com pages like the account/premium sections.
 
+// Fourth batch:
+// Restored Spotifuck parity for the premium spoof flow: added per-host GM menu toggles
+// (open.spotify.com vs www.spotify.com/payments.spotify.com), replacement logging with a
+// userscript-manager console table command, and a gated premiumPass() that separates text
+// replacements from runPremium() DOM styling. Replaced broad mutation handling with debounced
+// incremental batching (added element roots + changed text nodes with full-body fallback),
+// kept Force English verification/settled guards robust for both /preferences direct load and
+// iframe path, and removed stale Spanish-dependent premium selectors now that English is forced.
+
 (function() {
     'use strict';
 
     const PINK = '#FFD2D7';
     const GREEN = '#1ed760';
+
+    const SPOOF_OPEN_KEY = 'spotikit_premSpoofOpen';
+    const SPOOF_WWW_KEY = 'spotikit_premSpoofWWW';
+    const HOST_IS_OPEN = location.hostname === 'open.spotify.com';
+    const HOST_IS_WWW = location.hostname === 'www.spotify.com' || location.hostname === 'payments.spotify.com';
+
+    function getFlag(key) {
+        try { return typeof GM_getValue === 'function' ? GM_getValue(key, true) : true; }
+        catch (e) { return true; }
+    }
+
+    function setFlag(key, val) {
+        try { if (typeof GM_setValue === 'function') GM_setValue(key, val); } catch (e) {}
+    }
+
+    function premiumSpoofEnabledHere() {
+        if (HOST_IS_OPEN) return getFlag(SPOOF_OPEN_KEY);
+        if (HOST_IS_WWW) return getFlag(SPOOF_WWW_KEY);
+        return false;
+    }
 
     function forceEnglish() {
         try {
@@ -51,13 +83,24 @@
             Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'], configurable: true });
         } catch (e) {}
 
-        const m = location.pathname.match(/^\/intl-([a-z]{2})(\/.*)?$/i);
-        if (m && m[1].toLowerCase() !== 'en') {
-            location.replace(location.origin + (m[2] || '/') + location.search + location.hash);
-            return;
+        if (location.hostname === 'www.spotify.com') {
+            const ENGLISH_REGIONS = ['us', 'gb', 'ca', 'au', 'ie', 'nz'];
+            const m = location.pathname.match(/^\/([a-z]{2})(\/.*)?$/i);
+            if (m && !ENGLISH_REGIONS.includes(m[1].toLowerCase())) {
+                location.replace(location.origin + '/us' + (m[2] || '/') + location.search + location.hash);
+                return;
+            }
         }
 
-        forceEnglishAccountSetting();
+        if (location.hostname === 'open.spotify.com') {
+            const m = location.pathname.match(/^\/intl-([a-z]{2})(\/.*)?$/i);
+            if (m && m[1].toLowerCase() !== 'en') {
+                location.replace(location.origin + (m[2] || '/') + location.search + location.hash);
+                return;
+            }
+
+            forceEnglishAccountSetting();
+        }
     }
 
     function forceEnglishAccountSetting() {
@@ -900,22 +943,82 @@ ul.oPf3qKGRkUM3T0bK{display:block!important;overflow-y:auto!important}
         "Limited skips": "Unlimited skips",
         "Free plan": "Premium Individual",
     };
+
+    const replacementLog = new Map();
+
+    function logChange(selector, from, to) {
+        const key = `${selector}\u0000${from}\u0000${to}`;
+        const existing = replacementLog.get(key);
+        if (existing) {
+            existing.times_applied++;
+        } else {
+            replacementLog.set(key, { selector, old_text: from, new_text: to, times_applied: 1 });
+        }
+    }
+
+    function printReplacementLog() {
+        if (replacementLog.size === 0) {
+            console.log('[SpotiKit] Nothing has been replaced yet.');
+            return;
+        }
+        console.log(`[SpotiKit] ${replacementLog.size} distinct change(s) made so far:`);
+        console.table(Array.from(replacementLog.values()));
+    }
+
+    function applyReplacements(node) {
+        let value = node.nodeValue;
+        if (value == null) return;
+
+        let changed = false;
+        for (const [from, to] of Object.entries(REPLACE)) {
+            if (value.includes(from)) {
+                value = value.replaceAll(from, to);
+                changed = true;
+                logChange('(page text)', from, to);
+            }
+        }
+
+        if (changed) node.nodeValue = value;
+    }
+
+    function scanText(root) {
+        if (!root) return;
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+        let node;
+        while ((node = walker.nextNode())) applyReplacements(node);
+    }
+
+    function registerPremiumMenuCommands() {
+        if (typeof GM_registerMenuCommand !== 'function') return;
+
+        GM_registerMenuCommand(
+            `${getFlag(SPOOF_OPEN_KEY) ? '✅' : '❌'} Visual Premium Spoof (open.spotify.com)`,
+            () => {
+                setFlag(SPOOF_OPEN_KEY, !getFlag(SPOOF_OPEN_KEY));
+                location.reload();
+            }
+        );
+
+        GM_registerMenuCommand(
+            `${getFlag(SPOOF_WWW_KEY) ? '✅' : '❌'} Visual Premium Spoof (www.spotify.com + payments.spotify.com)`,
+            () => {
+                setFlag(SPOOF_WWW_KEY, !getFlag(SPOOF_WWW_KEY));
+                location.reload();
+            }
+        );
+
+        GM_registerMenuCommand('📋 Show everything replaced so far (console)', () => {
+            printReplacementLog();
+            alert('Replacement log printed to DevTools console.');
+        });
+    }
+
+    registerPremiumMenuCommands();
+
     function runPremium() {
         const b = document.body;
         if (!b) return;
-        const w = document.createTreeWalker(b, NodeFilter.SHOW_TEXT, null, false);
-        let n;
-        while (n = w.nextNode()) {
-            let v = n.nodeValue;
-            let c = false;
-            for (const [from, to] of Object.entries(REPLACE)) {
-                if (v.includes(from)) {
-                    v = v.replaceAll(from, to);
-                    c = true;
-                }
-            }
-            if (c) n.nodeValue = v;
-        }
+
         document.querySelectorAll('.encore-text-title-medium, [class*="title-medium"]').forEach(el => {
             if ((el.textContent || '').trim() === 'Premium Individual') {
                 el.style.color = window.location.href.includes('/subscription/manage/') ? '#000' : PINK;
@@ -926,6 +1029,7 @@ ul.oPf3qKGRkUM3T0bK{display:block!important;overflow-y:auto!important}
                 }
             }
         });
+
         const planCard = document.querySelector('[data-testid="plan-card"]');
         if (planCard && !planCard.querySelector('.__sp_logo')) {
             planCard.style.position = 'relative';
@@ -940,67 +1044,82 @@ ul.oPf3qKGRkUM3T0bK{display:block!important;overflow-y:auto!important}
             const btnRow = planCard.querySelector('[class*="dCZPlm"]');
             if (btnRow) btnRow.parentNode.insertBefore(msg, btnRow);
         }
+
         document.querySelectorAll('h1, h2, h3, h4, strong, span, div[class*="plan"], div[class*="Plan"]').forEach(el => {
             const t = (el.textContent || '').trim();
             if (t === 'Free' || t === 'Spotify Free' || t === 'Free plan') {
+                logChange('plan headings', t, 'Premium Individual');
                 el.textContent = 'Premium Individual';
                 el.style.color = PINK;
                 el.style.fontWeight = '700';
             }
         });
+
         document.querySelectorAll('a, button, [role="button"]').forEach(el => {
-            const t = (el.innerText || el.textContent || '').trim().toLowerCase();
-            if (/^(get|buy|join|obtener|conseguir)\s*premium/.test(t)) {
+            const orig = (el.innerText || el.textContent || '').trim();
+            const t = orig.toLowerCase();
+            if (/^(get|buy|join)\s*premium/.test(t)) {
+                logChange('premium CTA', orig, 'DONT JOIN PREMIUM');
                 el.textContent = 'DONT JOIN PREMIUM';
                 el.style.cssText += `background:${PINK}!important;color:#000!important;border:none!important;border-radius:20px!important;font-weight:700!important;pointer-events:none!important;cursor:default!important;`;
                 el.onclick = e => { e.preventDefault(); e.stopPropagation(); };
             }
-            if (/^(explore|view|explorar|ver)\s*(plans|planes)/.test(t)) {
+            if (/^(explore|view)\s*plans/.test(t)) {
+                logChange('plans button', orig, 'Manage plan');
                 el.textContent = 'Manage plan';
                 el.style.cssText += `background:transparent!important;color:#fff!important;border:1px solid #727272!important;border-radius:20px!important;font-weight:700!important;pointer-events:none!important;cursor:default!important;`;
                 el.onclick = e => { e.preventDefault(); e.stopPropagation(); };
             }
-            if (/^(try|pru[eé]ba)/.test(t)) el.style.display = 'none';
+            if (/^try/.test(t)) el.style.display = 'none';
         });
+
         document.querySelectorAll('[class*="badge"], [class*="Badge"]').forEach(el => {
             if (/^free$/i.test(el.textContent.trim())) {
+                logChange('badge', el.textContent.trim(), 'PREMIUM');
                 el.textContent = 'PREMIUM';
                 el.style.background = PINK;
                 el.style.color = '#000';
             }
         });
+
         document.querySelectorAll('table').forEach(tbl => {
             tbl.querySelectorAll('td, th').forEach(cell => {
                 const t = cell.textContent.trim().toLowerCase();
-                if (!t || t === '\u2014' || t === '-' || t === 'no' || /gratuito|free/.test(t)) {
-                    cell.innerHTML = `<span style="color:${GREEN};font-weight:700;">\u2713</span>`;
+                if (!t || t === '—' || t === '-' || t === 'no' || /free/.test(t)) {
+                    cell.innerHTML = `<span style="color:${GREEN};font-weight:700;">✓</span>`;
                 }
             });
         });
+
         document.querySelectorAll('span[data-encore-id="text"]').forEach(el => {
             const t = el.textContent.trim();
-            if (t === 'Download for offline listening' || t === 'Descarga canciones para disfrutarlas sin conexi\u00f3n' || t === 'Descarga canciones para disfrutarlas sin conexi n') {
+            if (t === 'Download for offline listening') {
+                logChange('encore text', t, 'Spotify wont fuck you');
                 el.textContent = 'Spotify wont fuck you';
             }
         });
+
         const upgradeBtn = document.querySelector('[data-testid="upgrade-button"]');
         if (upgradeBtn) upgradeBtn.style.display = 'none';
         const installBtn = document.querySelector('a[href="/download"]');
         if (installBtn) installBtn.style.display = 'none';
         const premiumMenu = document.querySelector('a[href*="premium/?ref=web_loggedin_upgrade_menu"]');
         if (premiumMenu) premiumMenu.style.display = 'none';
-        const planesXpath = document.evaluate(
-            '//a[text()="Planes Premium"] | //span[text()="Planes Premium"] | //div[text()="Planes Premium"] | //a[text()="Premium Plans"] | //span[text()="Premium Plans"] | //div[text()="Premium Plans"]',
+
+        const plansXpath = document.evaluate(
+            '//a[text()="Premium Plans"] | //span[text()="Premium Plans"] | //div[text()="Premium Plans"]',
             document, null, XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null
         );
-        for (let i = 0; i < planesXpath.snapshotLength; i++) {
-            const n = planesXpath.snapshotItem(i);
+        for (let i = 0; i < plansXpath.snapshotLength; i++) {
+            const n = plansXpath.snapshotItem(i);
             if (n) n.style.display = 'none';
         }
-        document.querySelectorAll('[aria-label*="Planes Premium"], [aria-label*="Premium Plans"], [data-ga-action="premium"], [data-ga-category="menu"] a, a[href*="/premium/"]').forEach(el => {
+
+        document.querySelectorAll('[aria-label*="Premium Plans"], [data-ga-action="premium"], [data-ga-category="menu"] a, a[href*="/premium/"]').forEach(el => {
             const t = el.textContent.trim();
-            if (t === 'Planes Premium' || t === 'Premium Plans') el.style.display = 'none';
+            if (t === 'Premium Plans') el.style.display = 'none';
         });
+
         const DESKTOP_SELECTORS = [
             '[data-testid="open-in-app-button"]',
             '[data-testid="install-app-button"]',
@@ -1014,21 +1133,25 @@ ul.oPf3qKGRkUM3T0bK{display:block!important;overflow-y:auto!important}
             '[class*="view-in-app"]',
             '[class*="desktop-app"]',
         ];
+
         DESKTOP_SELECTORS.forEach(sel => {
             document.querySelectorAll(sel).forEach(el => el.style.display = 'none');
         });
+
         document.querySelectorAll('a, button, [role="button"]').forEach(el => {
             const t = (el.textContent || '').trim().toLowerCase();
-            if (/open (in|the) (app|desktop|spotify)|install|download (the )?app|get the app|launch|listen in app|listen on desktop|use (the )?(app|desktop)|abrir en (la )?(aplicaci[óo]n|app)|abrir en ordenador|instalar|descargar (la )?app/.test(t)) {
+            if (/open (in|the) (app|desktop|spotify)|install|download (the )?app|get the app|launch|listen in app|listen on desktop|use (the )?(app|desktop)/.test(t)) {
                 el.style.display = 'none';
             }
         });
+
         const premiumBanner = document.querySelector('[data-testid="compact-banner"]');
         if (premiumBanner) {
             const wrapper = premiumBanner.closest('[class*="dad329a7"]');
             if (wrapper) {
                 wrapper.style.width = '100%';
             }
+
             premiumBanner.style.cssText += `
                 display:flex !important;
                 flex-direction:row !important;
@@ -1040,6 +1163,7 @@ ul.oPf3qKGRkUM3T0bK{display:block!important;overflow-y:auto!important}
                 min-width:unset !important;
                 width:100% !important;
             `;
+
             const left = document.createElement('div');
             left.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;row-gap:var(--encore-spacing-tighter-2);padding:var(--encore-spacing-looser) var(--encore-spacing-tighter-2);cursor:pointer;';
             const pencilSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -1058,6 +1182,7 @@ ul.oPf3qKGRkUM3T0bK{display:block!important;overflow-y:auto!important}
                 e.stopPropagation();
                 window.location.href = 'https://www.spotify.com/us/account/profile/';
             };
+
             const right = document.createElement('div');
             right.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;row-gap:var(--encore-spacing-tighter-2);padding:var(--encore-spacing-looser) var(--encore-spacing-tighter-2);cursor:pointer;border-left:1px solid #404040;';
             const cardSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -1076,17 +1201,86 @@ ul.oPf3qKGRkUM3T0bK{display:block!important;overflow-y:auto!important}
                 e.stopPropagation();
                 window.location.href = 'https://www.spotify.com/us/account/saved-payment-cards/';
             };
+
             premiumBanner.innerHTML = '';
             premiumBanner.appendChild(left);
             premiumBanner.appendChild(right);
         }
+
         if (/\/premium\/|\/duo\/|\/student\/|\/family\//.test(window.location.href) && !document.querySelector('.__sp_premium_done')) {
             window.location.replace('https://open.spotify.com/');
         }
+
         if (window.location.hostname === 'payments.spotify.com' && !document.querySelector('.__sp_pay_done')) {
             window.location.replace('https://open.spotify.com/');
         }
     }
-    setTimeout(runPremium, 300);
-    setTimeout(runPremium, 2000);
+
+    function premiumPass(changedRoot) {
+        if (!premiumSpoofEnabledHere()) return;
+        if (changedRoot) scanText(changedRoot);
+        else scanText(document.body);
+        runPremium();
+    }
+
+    setTimeout(() => premiumPass(document.body), 300);
+    setTimeout(() => premiumPass(document.body), 1200);
+
+    let premiumTimer;
+    let pendingElementRoots = new Set();
+    let pendingTextNodes = new Set();
+    let premiumObserver = null;
+
+    function flushPremiumMutations() {
+        const totalPending = pendingElementRoots.size + pendingTextNodes.size;
+
+        if (pendingElementRoots.size > 0 && pendingElementRoots.size <= 20) {
+            pendingElementRoots.forEach(node => scanText(node));
+        } else if (pendingElementRoots.size > 20 || totalPending > 80) {
+            scanText(document.body);
+        }
+        pendingElementRoots.clear();
+
+        if (totalPending <= 80) {
+            pendingTextNodes.forEach(node => applyReplacements(node));
+        }
+        pendingTextNodes.clear();
+
+        runPremium();
+    }
+
+    function handlePremiumMutations(mutations) {
+        if (!premiumSpoofEnabledHere()) return;
+
+        for (const mutation of mutations) {
+            if (mutation.type === 'childList') {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === Node.ELEMENT_NODE) pendingElementRoots.add(node);
+                });
+            } else if (mutation.type === 'characterData' && mutation.target.nodeType === Node.TEXT_NODE) {
+                pendingTextNodes.add(mutation.target);
+            }
+        }
+
+        clearTimeout(premiumTimer);
+        premiumTimer = setTimeout(flushPremiumMutations, 350);
+    }
+
+    function startPremiumObserver() {
+        if (!document.body) return;
+        if (premiumObserver) premiumObserver.disconnect();
+
+        premiumObserver = new MutationObserver(handlePremiumMutations);
+        premiumObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+        });
+    }
+
+    const waitForPremiumBody = setInterval(() => {
+        if (!document.body) return;
+        clearInterval(waitForPremiumBody);
+        startPremiumObserver();
+    }, 100);
 })();
