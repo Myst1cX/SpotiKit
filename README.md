@@ -12,7 +12,7 @@ Two scripts, pick one:
 ## Features
 
 > **FORCE ENGLISH**  
-> Overrides `navigator.language`, strips non-English `/intl-xx/` and region paths, and flips your account's actual language setting at `open.spotify.com/preferences` through a hidden iframe — reloads, verifies it stuck, retries a few times if not.  
+> Overrides `navigator.language`, strips non-English `/intl-xx/` and region paths, and flips your account's actual language setting at `open.spotify.com/preferences` through a hidden iframe - reloads, verifies it stuck, retries a few times if not.  
 > Everything else here is keyed off English aria-labels, so without this the scripts just silently stop matching on non-English accounts.
 >
 > **PREMIUM SPOOF**  
