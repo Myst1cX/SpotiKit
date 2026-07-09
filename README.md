@@ -17,7 +17,7 @@ Two scripts, pick one:
 >
 > **PREMIUM SPOOF**  
 > Swaps "Free"/"Spotify Free" text and badges for Premium, recolors plan cards, relabels or hides upgrade/"Try" buttons, turns pricing-table cells into checkmarks, and rebuilds the account compact banner into "Edit profile"/"Payment method" buttons instead of an upgrade nag.  
-> Toggleable per site (open.spotify.com vs www.spotify.com/) from the userscript manager menu, saved via GM storage, on by default.
+> Toggleable per site (open.spotify.com vs www.spotify.com) from the userscript manager menu, saved via GM storage, on by default.
 >
 > **AD-SLOT CLEANUP**  
 > Removes ad-slot-container elements from the DOM. Cosmetic only — doesn't touch the actual audio ad requests (see Ad-Blocking below for that).
