@@ -62,22 +62,21 @@ Two scripts, pick one:
 * * *
 
 ## Installation
-
-> 1. Install [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/).
-> 2. Click whichever raw link matches what you want - it'll pop the install dialog:   
-> a) Desktop (spoof only): **https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.js**   
-> b) Mobile-like layout: **https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js**   
-> 3. Install it.
-> 4. Go to [open.spotify.com](https://open.spotify.com) and reload.
-> 5. On mobile, you'll need a few more steps:
-> 6. Install Chameleon extension
-> 7. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop)
-> 8. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option
-> 9. Go back to Firefox browser > Firefox Settings > Site settings > Click on "DRM-controlled content" and select "Allowed"
-> 10. Restart Firefox
-> 11. Open Spotify Web and login to your account
-> 12. The interface should be mobile-friendly > If it ever resets, try redoing the Chameleon extension configuration and refreshing the Spotify page
-> 13. NOTE: Keep Desktop Mode (browser setting) disabled.
+ 
+> 1. Download [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/).  
+> 2. Choose the version you need. The raw link below will pop the install dialog for you.   
+> a) Desktop (spoof only): [here](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.js)    
+> b) Mobile-like layout: [here](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)    
+> 3. Go to [open.spotify.com](https://open.spotify.com) and reload the page.  
+> 4. On mobile, you will require a few more steps - tricking the browser with a User Agent:   
+> 5. Install Chameleon extension    
+> 6. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop)   
+> 7. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option   
+> 8. Go back to Firefox browser > Firefox Settings > Site settings > Click on "DRM-controlled content" and select "Allowed"   
+> 9. Restart Firefox    
+> 10. Open Spotify Web and login to your account    
+> 11. The interface should be mobile-friendly > If it ever resets, try redoing the Chameleon extension configuration and refreshing the Spotify page   
+> 12. NOTE: Keep Desktop Mode (browser setting) disabled.   
 
 * * *
 
