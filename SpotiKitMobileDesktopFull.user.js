@@ -35,6 +35,10 @@
 // "Free" text as "Premium," hides upgrade/install-app prompts, and redirects away from the premium/duo/student/family/payments pages
 // Restored the @match lines for www.spotify.com/*/account,premium,duo,student,family/* and payments.spotify.com/*
 
+// Third batch:
+// Restricted the mobile bottom nav bar (Home/Search/Library) and its CSS to only load on open.spotify.com, 
+// so it stops appearing on other spotify.com pages like the account/premium sections.
+
 (function() {
     'use strict';
 
@@ -850,18 +854,22 @@ ul.oPf3qKGRkUM3T0bK{display:block!important;overflow-y:auto!important}
         window.addEventListener('popstate', onLocationChange);
     }
 
-    injectMobileCSS();
+    const IS_OPEN_SPOTIFY = window.location.hostname === 'open.spotify.com';
 
-    const waitForBody = setInterval(() => {
-        if (document.body) {
-            clearInterval(waitForBody);
-            lastPath = location.pathname;
-            updateBodyClass();
-            createBottomNav();
-            firstFuck();
-            hookHistory();
-        }
-    }, 100);
+    if (IS_OPEN_SPOTIFY) {
+        injectMobileCSS();
+
+        const waitForBody = setInterval(() => {
+            if (document.body) {
+                clearInterval(waitForBody);
+                lastPath = location.pathname;
+                updateBodyClass();
+                createBottomNav();
+                firstFuck();
+                hookHistory();
+            }
+        }, 100);
+    }
 
     GM_addStyle(`
         .__sp_curr {
