@@ -10,8 +10,8 @@
 // @run-at       document-start
 // @homepageURL  https://github.com/Myst1cX/SpotiKit
 // @supportURL   https://github.com/Myst1cX/SpotiKit/issues
-// @updateURL   https://raw.githubusercontent.com/Myst1cX/SpotiKit/refs/heads/main/SpotiKitMobileDesktop.user.js
-// @downloadURL https://raw.githubusercontent.com/Myst1cX/SpotiKit/refs/heads/main/SpotiKitMobileDesktop.user.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js
 // ==/UserScript==
 
 // RESOLVED (7.3.1.fork, Myst1cX):
