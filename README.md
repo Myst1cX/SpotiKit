@@ -8,7 +8,7 @@ Two scripts, pick one:
 > **SpotiwebJS**: premium spoof + ad-slot removal only. No layout changes. Use this if you want Spotify's normal desktop UI left alone.
 >
 > **SpotiKitMobileDesktop**: everything SpotiwebJS does, plus a full mobile-like layout on open.spotify.com (floating player, bottom nav, library-as-overlay). Already includes the desktop script's features, so don't install both.
-
+w
 ## Features
 
 > **FORCE ENGLISH**  
@@ -17,7 +17,7 @@ Two scripts, pick one:
 >
 > **PREMIUM SPOOF**  
 > Swaps "Free"/"Spotify Free" text and badges for Premium, recolors plan cards, relabels or hides upgrade/"Try" buttons, turns pricing-table cells into checkmarks, and rebuilds the account compact banner into "Edit profile"/"Payment method" buttons instead of an upgrade nag.  
-> Toggleable per site (open.spotify.com vs www.spotify.com) from the userscript manager menu, saved via GM storage, on by default.
+> Toggleable per site (for `open.spotify.com` and for `www.spotify.com`) from the userscript manager menu, saved via GM storage, enabled by default.
 >
 > **AD-SLOT CLEANUP**  
 > Removes ad-slot-container elements from the DOM. Cosmetic only.   
@@ -31,7 +31,7 @@ Two scripts, pick one:
 
 ### SpotiwebJS only
 
-> Matches open.spotify.com, www.spotify.com's account/premium/duo/student/family pages, and payments.spotify.com.  
+> Matches `open.spotify.com` and `www.spotify.com`'s account/premium/duo/student/family payment plan pages,   
 > Premium/duo/student/family pages get replaced outright with a "you don't need Premium" message and a link home.  
 > Payments page gets replaced with a "don't waste your money" message; checkout/payment buttons are disabled.
 
@@ -74,9 +74,7 @@ Two scripts, pick one:
 
 * * *
 
-> **TIP 1:** Visual Premium Spoof and Force English apply automatically. 
->
-> **TIP 2:** Add Spotify Web Player to your home screen for a PWA-like experience.
+> **TIP:** Add Spotify Web Player to your home screen for a PWA-like experience.
 
 * * *
 
