@@ -29,13 +29,13 @@ Two scripts, pick one:
 > **EFFICIENT SCANNING**  
 > The text-replacement pass only re-scans nodes that actually changed (debounced MutationObserver), not a blind full-page walk on a timer.
 
-### SpotiwebJS only
+### SpotiwebJS 
 
 > Matches `open.spotify.com`, `www.spotify.com`'s account/premium/duo/student/family pages and `payments.spotify.com` (plan payment blockers/redirects),   
 > Premium/duo/student/family pages get replaced outright with a "you don't need Premium" message and a link home.  
 > Payments page gets replaced with a "don't waste your money" message; checkout/payment buttons are disabled.
 
-### SpotiKitMobileDesktop only
+### SpotiKitMobileDesktop 
 
 > Does everything above too (layout changes are restricted to open.spotify.com so they don't leak onto the account pages), plus:
 >
