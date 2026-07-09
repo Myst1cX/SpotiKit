@@ -54,6 +54,10 @@ Two scripts, pick one:
 > **SIMPLER REDIRECTS**  
 > Premium/duo/student/family and payments pages redirect straight to open.spotify.com instead of showing an overlay message.
 
+> NOTE: This is an experimental build. There may be bugs with the library view.
+> Consider a more stable version: [Spotifuck Userscript](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-v6.user.js).
+> [README & Installation Guide](https://github.com/Myst1cX/spotifuck-userscript/blob/main/README.md)
+
 ## Installation
 
 > 1. Install [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/).
