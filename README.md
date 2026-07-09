@@ -56,7 +56,7 @@ Two scripts, pick one:
 
 * * *
 
-> NOTE: This is an experimental build. There may be bugs with the library view.   
+> **NOTE:** This is an experimental build. There may be bugs with the library view.   
 > Consider a more stable version: [Spotifuck Userscript](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-v6.user.js). Here is the [README & Installation Guide](https://github.com/Myst1cX/spotifuck-userscript/blob/main/README.md).
 
 * * *
