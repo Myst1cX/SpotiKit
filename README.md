@@ -1,6 +1,6 @@
 ## SPOTIKIT USERSCRIPTS
 
-> Fork of [kitbodega/SpotiKit](https://github.com/kitbodega/SpotiKit).
+> Fork of [kitbodega/SpotiKit](https://github.com/kitbodega/SpotiKit).   
 > **Recommended userscript manager:** [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/)
 
 Two scripts, pick one:
