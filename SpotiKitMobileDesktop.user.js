@@ -60,7 +60,7 @@
 // 1. "Visual Premium Spoof (open.spotify.com)" - the in-player text/badge relabeling and account widgets
 // that render inside the web player.
 // 2. "Visual Premium Spoof (www.spotify.com)" - the account site (spotify.com /premium, /duo, /student,
-// /family, purchase pages) and the payments.spotify.com blockers/redirects.
+// /family, purchase pages) and the payments.spotify.com (plan payment blockers/redirects).
 // Each toggle is independent, persists via GM storage, and reloads the page to apply. Both are enabled by default.
 // Added the matching @grant lines (GM_registerMenuCommand, GM_setValue, GM_getValue) needed for the above.
 
