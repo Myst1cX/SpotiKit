@@ -100,4 +100,4 @@ w
 
 ## License
 
-> This project is licensed under the [MIT License](https://github.com/Myst1cX/SpotiKit/blob/main/LICENSE).
+> This project is licensed under the [MIT License](https://github.com/Myst1cX/SpotiKit/blob/main/LICENSE). (attached below is the original author's license)
