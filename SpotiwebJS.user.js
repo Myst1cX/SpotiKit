@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         SpotiKit++ desktop
-// @namespace    https://github.com/kitbodega/SpotiKit
+// @namespace    https://github.com/Myst1cX/SpotiKit
 // @version      7.0.fork
 // @description  SpotiKit — visual premium UI overlay for Spotify and ad banner blocking
-// @author       kit_fogos
+// @author       kit_fogos, Myst1cX (fork)
 // @match        https://www.spotify.com/*/account/*
 // @match        https://open.spotify.com/*
 // @match        https://www.spotify.com/*/premium/*
