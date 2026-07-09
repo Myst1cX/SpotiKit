@@ -15,7 +15,7 @@ w
 > Overrides `navigator.language`, strips non-English `/intl-xx/` and region paths, and flips your account's actual language setting at `open.spotify.com/preferences` through a hidden iframe - reloads, verifies it stuck, retries a few times if not.  
 > Everything else here is keyed off English aria-labels, so without this the scripts just silently stop matching on non-English accounts.
 >
-> **PREMIUM SPOOF**  
+> **VISUAL PREMIUM SPOOF**  
 > Swaps "Free"/"Spotify Free" text and badges for Premium, recolors plan cards, relabels or hides upgrade/"Try" buttons, turns pricing-table cells into checkmarks, and rebuilds the account compact banner into "Edit profile"/"Payment method" buttons instead of an upgrade nag.  
 > Toggleable per site (for `open.spotify.com` and for `www.spotify.com`) from the userscript manager menu, saved via GM storage, enabled by default.
 >
