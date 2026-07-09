@@ -65,8 +65,8 @@ Two scripts, pick one:
 
 > 1. Install [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/).
 > 2. Click whichever raw link matches what you want - it'll pop the install dialog:
->    - Desktop / spoof only: **https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.js**
->    - Mobile-like layout: **https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js**
+> - Desktop / spoof only: **https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.js**
+> - Mobile-like layout: **https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js**
 > 3. Install it.
 > 4. Go to [open.spotify.com](https://open.spotify.com) and reload.
 > 5. On mobile, you'll need a few more steps:
