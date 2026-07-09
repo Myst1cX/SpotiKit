@@ -8,7 +8,7 @@ Two scripts, pick one:
 > **SpotiwebJS**: premium spoof + ad-slot removal only. No layout changes. Use this if you want Spotify's normal desktop UI left alone.
 >
 > **SpotiKitMobileDesktop**: everything SpotiwebJS does, plus a full mobile-like layout on open.spotify.com (floating player, bottom nav, library-as-overlay). Already includes the desktop script's features, so don't install both.
-w
+
 ## Features
 
 > **FORCE ENGLISH**  
