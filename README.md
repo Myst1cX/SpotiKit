@@ -1,7 +1,6 @@
 ## SPOTIKIT USERSCRIPTS
 
 > Fork of [kitbodega/SpotiKit](https://github.com/kitbodega/SpotiKit).
-> Strips the "Get Premium" nagging from the Spotify Web Player — Premium spoof, ad-slot cleanup, and (optionally) a mobile-style layout on desktop.
 > **Recommended userscript manager:** [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/)
 
 Two scripts, pick one:
