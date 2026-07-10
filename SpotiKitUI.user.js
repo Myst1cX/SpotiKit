@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SpotiKitUI maybe
+// @name         SpotiKitUI maybe + bottom:56px!important
 // @namespace    https://github.com/Myst1cX/SpotiKit
 // @version      7.3.2.fork
 // @description  Mobile-like layout for Spotify Web, plus visual premium spoof & ad-slot removal
@@ -896,7 +896,11 @@ div[data-testid=main-view]>*:not(#sp-bottom-nav){
 aside[data-testid=now-playing-bar]{
   min-width:100%!important;
   margin:0!important;
-  flex:0 0 auto!important;
+  position:fixed!important;
+  left:0!important;
+  right:0!important;
+  bottom:56px!important; /* sits above bottom nav */
+  z-index:9998!important;
   box-shadow:none!important;
   background:#000!important;
   border:none!important;
