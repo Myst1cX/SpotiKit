@@ -58,7 +58,7 @@ Two scripts, pick one:
 * * *
 
 > **NOTE:** This is an experimental build. There may be bugs with the library view.    
-> The original dev has resumed work since. Get SpotiKitUI, the updated version [here](https://github.com/kitbodega/SpotiKit/blob/main/SpotiKitUI.js).   
+> The original dev has resumed work since. Get SpotiKitUI, the updated version, [here](https://github.com/kitbodega/SpotiKit/blob/main/SpotiKitUI.js).   
 
 > You may also consider my own mobile script: [Spotifuck Userscript](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-v6.user.js).    
 > Check out [Spotifuck's README & Installation Guide](https://github.com/Myst1cX/spotifuck-userscript/blob/main/README.md).   
