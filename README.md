@@ -69,10 +69,10 @@ Two scripts, pick one:
  
 > 1. Download a userscript manager (Recommended: [Violentmonkey](https://violentmonkey.github.io/) or [Tampermonkey](https://www.tampermonkey.net/))     
 > 2. Choose the version you need. The raw link below will pop the install dialog for you.   
-> a) SpotiwebJS (Desktop, visual premium spoof only): [here](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.js)     
-> b) SpotiKitMobileDesktop (my 7.31.fork, mobile-like layout + visual premium spoof): [here](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)     
-> c) SpotiKitUI (the successor of SpotiKitMobileDesktop): [here](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
-> d) Spotifuck Userscript (mobile-like layout + visual premium spoof): [here](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-v6.user.js)     
+> a) SpotiwebJS (Desktop, visual premium spoof only): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.js)     
+> b) SpotiKitMobileDesktop (my 7.31.fork, mobile-like layout + visual premium spoof): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)     
+> c) SpotiKitUI (the successor of SpotiKitMobileDesktop): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
+> d) Spotifuck Userscript (mobile-like layout + visual premium spoof): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-v6.user.js)     
 > 4. Go to [open.spotify.com](https://open.spotify.com) and reload the page.  
 > 5. On mobile, you will require a few more steps - tricking the browser with a User Agent:   
 > 6. Install [Chameleon](https://addons.mozilla.org/en-US/android/addon/chameleon-ext/) extension    
