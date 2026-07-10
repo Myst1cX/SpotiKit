@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SpotiKitUI maybe + bottom:56px!important + height clip the player
+// @name         SpotiKitUI worky 2
 // @namespace    https://github.com/Myst1cX/SpotiKit
 // @version      7.3.2.fork
 // @description  Mobile-like layout for Spotify Web, plus visual premium spoof & ad-slot removal
@@ -841,22 +841,31 @@ body.sp-search #global-nav-bar{display:flex!important}
    child now, not position:fixed - keeps its natural height and the browser
    reserves that space for free. */
 .Root__main-view,
-div[data-testid=main-view]{
+div[data-testid=main-view],
+#main-view{
   display:flex!important;
   flex-direction:column!important;
-  height:100%!important;
-  overflow:hidden!important
-}
-.Root__main-view>*:not(#sp-bottom-nav),
-div[data-testid=main-view]>*:not(#sp-bottom-nav){
-  flex:1 1 auto!important;
   min-height:0!important;
+  overflow:hidden!important;
+}
+
+/* clip the real scroll container itself */
+div[data-testid=main-view],
+#main-view{
   height:calc(100dvh - var(--sp-np-bar-height, 0px) - 56px)!important;
   max-height:calc(100dvh - var(--sp-np-bar-height, 0px) - 56px)!important;
-  height:calc(100vh - var(--sp-np-bar-height, 0px) - 56px)!important;
-  max-height:calc(100vh - var(--sp-np-bar-height, 0px) - 56px)!important;
   overflow-y:auto!important;
   overflow-x:hidden!important;
+  padding-bottom:0!important;
+}
+
+/* fallback for browsers without dvh */
+@supports not (height: 100dvh) {
+  div[data-testid=main-view],
+  #main-view{
+    height:calc(100vh - var(--sp-np-bar-height, 0px) - 56px)!important;
+    max-height:calc(100vh - var(--sp-np-bar-height, 0px) - 56px)!important;
+  }
 }
 #sp-bottom-nav{
   position:fixed!important;
@@ -865,7 +874,7 @@ div[data-testid=main-view]>*:not(#sp-bottom-nav){
   bottom:0!important;
   width:100%!important;
   height:56px;
-  background:#000!important;
+  background:#000!important; /* keep non-transparent */
   border:none!important;
   border-top:1px solid #666!important;
   box-shadow:none!important;
@@ -902,7 +911,7 @@ aside[data-testid=now-playing-bar]{
   position:fixed!important;
   left:0!important;
   right:0!important;
-  bottom:56px!important;
+  bottom:56px!important; /* sits above bottom nav */
   z-index:9998!important;
   box-shadow:none!important;
   background:#000!important;
