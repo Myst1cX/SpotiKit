@@ -37,12 +37,24 @@
 // Third batch:
 // Removed the collapsed/"minimized" mini-player state entirely - the playback controls card
 // is now always shown expanded, matching spotifuck. Also fixed the main scrollable view
-// (homepage, lyrics, etc.) bleeding through underneath the nav bar and playback controls:
+// (homepage, playlists, etc.) bleeding through underneath the nav bar and playback controls:
 // those containers were being forced fully transparent, and the space reserved at the
 // bottom of the scroll view for the controls was a hardcoded 64px fallback that never
 // matched the card's real (now always-expanded, variable) height. The scroll view is now
 // clipped to the area above the controls, same as spotifuck, with the reserved space kept
-// in sync with the controls' actual measured height.
+// in sync with the controls' actual measured height (see --sp-np-bar-height).
+//
+// Fourth batch:
+// That padding-bottom fix only ever covered .Root__main-view / div[data-testid=main-view].
+// It did NOT cover #Desktop_PanelContainer_Id, the separate right-hand "Now Playing View"
+// panel that hosts lyrics/queue/credits - that's a sibling container, full device height,
+// with nothing reserving space for the controls. Opening it (e.g. lyrics) was still
+// bleeding through underneath the nav/controls. Ported spotifuck's actual fix for this:
+// window.closeNowPlay(), which force-closes that panel on nav instead of trying to make
+// it coexist with the controls. Wired it into search focus, library item taps, and every
+// bottom-nav tab press. A commented-out alternative (clip/reserve space for the panel
+// instead of closing it) is left in place near injectMobileCSS and setupNPBarHeightSync
+// in case that's ever preferred over auto-closing.
 
 (function() {
     'use strict';
@@ -601,6 +613,24 @@
         return cache.rootContainer;
     }
 
+    // closeNowPlay - ported from spotifuck's window.closeNowPlay. The right-hand
+    // "Now Playing View" panel (#Desktop_PanelContainer_Id - hosts lyrics/queue/credits)
+    // is a sibling of the main scroll view, not a descendant of it, so it is NOT
+    // covered by the padding-bottom reservation applied to .Root__main-view /
+    // div[data-testid=main-view]. Left open, it renders full-height behind the fixed
+    // bottom nav + playback controls and bleeds through them. Rather than trying to
+    // resize/clip that panel to fit above the controls (see the commented-out
+    // alternative near setupNPBarHeightSync below), we just force it closed whenever
+    // the user navigates elsewhere, same as spotifuck - it's only ever meant to be
+    // opened deliberately, not to coexist with the mobile nav.
+    window.closeNowPlay = function() {
+        const panelContainer = document.querySelector('#Desktop_PanelContainer_Id');
+        if (panelContainer && panelContainer.parentNode?.parentNode?.ariaHidden === 'false') {
+            const toggleBtn = panelContainer.parentNode.parentNode.nextElementSibling?.querySelector('button');
+            if (toggleBtn) toggleBtn.click();
+        }
+    };
+
     let originalHeaderText = null;
 
     window.switchLs = function(forceCollapse = false) {
@@ -681,6 +711,7 @@
                     if (!isFolder) {
                         setTimeout(() => {
                             switchLs(true);
+                            closeNowPlay();
                         }, 300);
                     }
                 });
@@ -694,6 +725,7 @@
                 searchInput.addEventListener('focus', () => {
                     const npBar = document.querySelector('aside[data-testid=now-playing-bar]');
                     if (npBar) npBar.style.display = 'none';
+                    closeNowPlay();
                 });
                 searchInput.addEventListener('blur', () => {
                     const npBar = document.querySelector('aside[data-testid=now-playing-bar]');
@@ -745,6 +777,20 @@
             window.addEventListener('resize', updateNPBarHeightVar);
         }
     }
+
+    /* --- ALTERNATIVE (INACTIVE): companion JS for the commented-out CSS block in
+       injectMobileCSS (search "ALTERNATIVE (INACTIVE)"). --sp-np-bar-height is already
+       kept in sync by updateNPBarHeightVar() above, so no separate observer is needed -
+       the panel CSS reuses that same variable. This function is only here as a reminder
+       to re-enable the panel-close JS's opposite: if you go this route, comment out the
+       closeNowPlay() calls in setupSearchInput, setupLibraryGrid, and handleTabClick so
+       the panel isn't simultaneously being force-closed and resized.
+
+    function verifyNowPlayingPanelClipActive() {
+        const panel = document.querySelector('#Desktop_PanelContainer_Id');
+        if (panel) panel.dataset.spClipped = '1'; // no-op marker, CSS does the work
+    }
+    --- END ALTERNATIVE --- */
 
     function setupSwipeGestures() {
         const player = document.querySelector('aside[data-testid=now-playing-bar]');
@@ -844,6 +890,24 @@ body:has(#sp-bottom-nav) .Root__main-view,
 body:has(#sp-bottom-nav) div[data-testid=main-view]{
   padding-bottom:calc(56px + var(--sp-np-bar-height, 64px))!important
 }
+
+/* --- ALTERNATIVE (INACTIVE): keep the Now Playing/lyrics panel open instead of
+   auto-closing it via closeNowPlay(). Currently the active behavior force-closes
+   #Desktop_PanelContainer_Id on nav (see window.closeNowPlay + its call sites in
+   setupSearchInput/setupLibraryGrid/handleTabClick). If that's ever swapped out in
+   favor of letting the panel stay open and just clipping/reserving space for it like
+   the main view, uncomment this block AND the matching JS block in
+   setupNPBarHeightSync (below) that keeps --sp-np-bar-height in sync, then remove or
+   no-op the closeNowPlay() calls so the two approaches don't fight each other.
+
+#Desktop_PanelContainer_Id{
+  overflow-y:auto!important
+}
+body:has(#sp-bottom-nav) #Desktop_PanelContainer_Id,
+body:has(#sp-bottom-nav) #Desktop_PanelContainer_Id>*{
+  padding-bottom:calc(56px + var(--sp-np-bar-height, 64px))!important
+}
+--- END ALTERNATIVE --- */
 #sp-bottom-nav button{
   flex:1;
   display:flex;
@@ -1052,6 +1116,8 @@ ul.oPf3qKGRkUM3T0bK{display:block!important;overflow-y:auto!important}
     }
 
     function handleTabClick(name) {
+        closeNowPlay();
+
         if (name === 'library') {
             if (!sidebarOverlayActive) {
                 switchLs();
