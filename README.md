@@ -1,7 +1,7 @@
 ## SPOTIKIT USERSCRIPTS
 
 > Fork of [kitbodega/SpotiKit](https://github.com/kitbodega/SpotiKit).   
-> **Recommended userscript manager:** [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/)
+> **Recommended userscript manager:** [Violentmonkey](https://violentmonkey.github.io/) or [Tampermonkey](https://www.tampermonkey.net/)   
 
 Two scripts, pick one:
 
@@ -67,7 +67,7 @@ Two scripts, pick one:
 
 ## Installation
  
-> 1. Download [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/).  
+> 1. Download a userscript manager (Recommended: [Violentmonkey](https://violentmonkey.github.io/) or [Tampermonkey](https://www.tampermonkey.net/).)     
 > 2. Choose the version you need. The raw link below will pop the install dialog for you.   
 > a) SpotiwebJS (Desktop, visual premium spoof only): [here](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.js)     
 > b) SpotiKitMobileDesktop (my 7.31.fork, mobile-like layout + visual premium spoof): [here](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)     
@@ -75,7 +75,7 @@ Two scripts, pick one:
 > d) Spotifuck Userscript (mobile-like layout + visual premium spoof): [here](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-v6.user.js)     
 > 4. Go to [open.spotify.com](https://open.spotify.com) and reload the page.  
 > 5. On mobile, you will require a few more steps - tricking the browser with a User Agent:   
-> 6. Install Chameleon extension    
+> 6. Install [Chameleon](https://addons.mozilla.org/en-US/android/addon/chameleon-ext/) extension    
 > 7. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop)   
 > 8. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option   
 > 9. Go back to Firefox browser > Firefox Settings > Site settings > Click on "DRM-controlled content" and select "Allowed"   
@@ -92,7 +92,7 @@ Two scripts, pick one:
 
 ## Ad-Blocking (actual audio ads)
 
-> Neither script here blocks the ad audio itself — the ad-slot removal is just DOM cleanup. For true audio ad blocking, use **[uBlock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)** or **[uSpot](https://github.com/Myst1cX/uSpot/)** alongside whichever script you picked. More on the difference [here](https://github.com/Myst1cX/uSpot/blob/main/README.md#uspot-vs-ublock-origin-what-is-the-difference).
+> Neither script here blocks the ad audio itself — the ad-slot removal is just DOM cleanup. For true audio ad blocking, use **[uBlock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)** or **[uSpot](https://github.com/Myst1cX/uSpot/releases/)** alongside whichever script you picked. More on the difference [here](https://github.com/Myst1cX/uSpot/blob/main/README.md#uspot-vs-ublock-origin-what-is-the-difference).
 
 ## Notes
 
