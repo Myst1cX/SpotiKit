@@ -69,9 +69,10 @@ Two scripts, pick one:
  
 > 1. Download [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/).  
 > 2. Choose the version you need. The raw link below will pop the install dialog for you.   
-> a) Desktop (spoof only): [here](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.js)    
-> b) Mobile-like layout (my 7.31.fork): [here](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)
-> c) Up-to-date mobile-like layout (SpotiKitUI): [here](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)
+> a) SpotiwebJS (Desktop, visual premium spoof only): [here](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.js)     
+> b) SpotiKitMobileDesktop (my 7.31.fork, mobile-like layout + visual premium spoof): [here](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)     
+> c) SpotiKitUI (the successor of SpotiKitMobileDesktop): [here](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
+> d) Spotifuck Userscript (mobile-like layout + visual premium spoof): [here](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-v6.user.js)     
 > 4. Go to [open.spotify.com](https://open.spotify.com) and reload the page.  
 > 5. On mobile, you will require a few more steps - tricking the browser with a User Agent:   
 > 6. Install Chameleon extension    
