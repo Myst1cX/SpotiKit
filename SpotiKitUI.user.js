@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SpotiKitUI worky 2 now amoled
+// @name         SpotiKitUI worky 3
 // @namespace    https://github.com/Myst1cX/SpotiKit
 // @version      7.3.2.fork
 // @description  Mobile-like layout for Spotify Web, plus visual premium spoof & ad-slot removal
@@ -815,10 +815,13 @@ div[data-testid=root]{--panel-gap:0!important;--content-spacing:10px}
 #global-nav-bar a[href="/download"],
 button[data-testid=fullscreen-mode-button],
 div.main-view-container__mh-footer-container,
-a[href="/download"],
+a[href="/download"]{display:none!important}
+
+/*
 button[aria-label="Show Now Playing view"],
 button[aria-label="Hide Now Playing view"]
 {display:none!important}
+*/
 
 /* Superseded by visual premium spoof (runPremium/premiumPass JS logic, which already
    hides button[data-testid=upgrade-button] with logChange logging, and rebuilds
@@ -941,11 +944,7 @@ aside[data-testid=now-playing-bar]{
 }
 
 aside[data-testid=now-playing-bar] button[aria-label*="scroll"],
-aside[data-testid=now-playing-bar] button[aria-label*="info"],
-aside[data-testid=now-playing-bar] [class*="chevron"],
-aside[data-testid=now-playing-bar] [class*="Chevron"],
-aside[data-testid=now-playing-bar] button[aria-label*="Play from"],
-aside[data-testid=now-playing-bar] button[aria-label*="Queue"]{display:none!important}
+aside[data-testid=now-playing-bar] button[aria-label*="Play from"]{display:none!important}
 
 /* --- AMOLED playback controls (ported from spotifuck) --- */
 aside[data-testid=now-playing-bar]>div:first-child{
@@ -1062,14 +1061,15 @@ main>section h1.encore-text-headline-large{font-size:22px!important}
 section[data-testid=artist-page] span.encore-text-headline-large{font-size:26px!important}
 section[data-testid=artist-page] div[data-testid=grid-container] h2,section[data-testid=artist-page] section[data-testid=component-shelf]{padding:0 10px}
 .Root__top-container{grid-template-columns:auto 1fr auto!important}
-#Desktop_PanelContainer_Id{display:flex!important;flex-direction:column!important;overflow-y:auto!important}
+/* let Spotify manage right panel mount/visibility; forcing it causes empty black shell */
+/* #Desktop_PanelContainer_Id{display:flex!important;flex-direction:column!important;overflow-y:auto!important} */
 div.IPnR0MPdiJw3m3C8.rd25SoWs7Y4T40c7,
 button[aria-label="Comprimir Tu biblioteca"],
 button[aria-label="Collapse Your library"]{display:none!important}
-button[data-testid="npv-artist-bio-button"],.tDBAoTKiCjMk1wxv{display:none!important;height:0px!important}
-.qy8cKKS5c5Y24cTG{display:none!important}
-.lhB5KQbFP8BJIgvI{flex:1!important;overflow-y:auto!important}
-ul.oPf3qKGRkUM3T0bK{display:block!important;overflow-y:auto!important}
+/* button[data-testid="npv-artist-bio-button"],.tDBAoTKiCjMk1wxv{display:none!important;height:0px!important} */
+/* .qy8cKKS5c5Y24cTG{display:none!important} */
+/* .lhB5KQbFP8BJIgvI{flex:1!important;overflow-y:auto!important} */
+/* ul.oPf3qKGRkUM3T0bK{display:block!important;overflow-y:auto!important} */
         `;
         document.head.appendChild(style);
     }
