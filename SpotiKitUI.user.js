@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SpotiKitUI
+// @name         SpotiKitUI worky
 // @namespace    https://github.com/Myst1cX/SpotiKit
 // @version      7.3.2.fork
 // @description  Mobile-like layout for Spotify Web, plus visual premium spoof & ad-slot removal
