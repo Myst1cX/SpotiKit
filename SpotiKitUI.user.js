@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SpotiKitUI l
+// @name         SpotiKitUI worky revert
 // @namespace    https://github.com/Myst1cX/SpotiKit
 // @version      7.3.2.fork
 // @description  Mobile-like layout for Spotify Web, plus visual premium spoof & ad-slot removal
@@ -797,29 +797,8 @@
                     initFeatures();
                 }
             }
-            ensureBottomNavParent();
         });
         domObserver.observe(document.body, { childList: true, subtree: true });
-    }
-
-    // createBottomNav() can run before Spotify's React app has mounted .Root__main-view /
-    // div[data-testid=main-view], in which case it used to fall back to document.body and
-    // just stay there forever (the getElementById guard blocked any later retry). Since the
-    // real app root fills the viewport on its own (fixed/absolute), body has nothing left in
-    // normal flow to push a plain static block below - so the nav rendered pinned to the very
-    // top of the page instead of the bottom. Fix: keep retrying via the observer that's already
-    // running, and reparent the nav into the real main-view (as its last child) once it exists.
-    function ensureBottomNavParent() {
-        const mainView = document.querySelector('.Root__main-view') || document.querySelector('div[data-testid=main-view]');
-        if (!mainView) return;
-        const nav = cache.bottomNav || document.getElementById('sp-bottom-nav');
-        if (!nav) {
-            createBottomNav();
-            return;
-        }
-        if (nav.parentNode !== mainView) {
-            mainView.appendChild(nav);
-        }
     }
 
     function injectMobileCSS() {
@@ -873,16 +852,11 @@ div[data-testid=main-view]>*:not(#sp-bottom-nav){
   flex:1 1 auto!important;
   min-height:0!important;
   overflow-y:auto!important;
-  overflow-x:hidden!important;
-
-  padding-bottom:calc(var(--sp-np-bar-height,120px) + 56px)!important;
-  box-sizing:border-box!important;
+  overflow-x:hidden!important
 }
 #sp-bottom-nav{
   flex:0 0 auto!important;
-  position:sticky!important;
-  bottom:0!important;
-  z-index:10001!important;
+  position:static;
   width:100%;
   height:56px;
   background:#000!important;
@@ -917,8 +891,6 @@ div[data-testid=main-view]>*:not(#sp-bottom-nav){
 /* Collapsed/"minimized" mini-player state removed - always shown expanded, like spotifuck. */
 aside[data-testid=now-playing-bar]{
   min-width:100%!important;
-  width:100%!important;
-  grid-column:1/-1!important;
   margin:0!important;
   flex:0 0 auto!important;
   box-shadow:none!important;
@@ -928,11 +900,7 @@ aside[data-testid=now-playing-bar]{
   border-radius:0!important;
   max-height:40vh!important;
   overflow-y:auto!important;
-  contain:layout style paint;
-
-  position:sticky!important;
-  bottom:56px!important;   /* sits directly above bottom nav */
-  z-index:10000!important; /* below nav, above content */
+  contain:layout style paint
 }
 
 aside[data-testid=now-playing-bar] button[aria-label*="scroll"],
@@ -1078,9 +1046,6 @@ ul.oPf3qKGRkUM3T0bK{display:block!important;overflow-y:auto!important}
     function createBottomNav() {
         if (document.getElementById('sp-bottom-nav')) return;
 
-        const mainView = document.querySelector('.Root__main-view') || document.querySelector('div[data-testid=main-view]');
-        if (!mainView) return; // not mounted yet - ensureBottomNavParent() will retry via the DOM observer
-
         const nav = document.createElement('div');
         nav.id = 'sp-bottom-nav';
         cache.bottomNav = nav;
@@ -1101,6 +1066,7 @@ ul.oPf3qKGRkUM3T0bK{display:block!important;overflow-y:auto!important}
         });
 
         nav.appendChild(frag);
+        const mainView = document.querySelector('.Root__main-view') || document.querySelector('div[data-testid=main-view]') || document.body;
         mainView.appendChild(nav);
         updateActiveTab();
     }
