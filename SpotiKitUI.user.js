@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SpotiKitUI maybe + bottom:56px!important
+// @name         SpotiKitUI maybe + bottom:56px!important + height clip the player
 // @namespace    https://github.com/Myst1cX/SpotiKit
 // @version      7.3.2.fork
 // @description  Mobile-like layout for Spotify Web, plus visual premium spoof & ad-slot removal
@@ -851,9 +851,12 @@ div[data-testid=main-view]{
 div[data-testid=main-view]>*:not(#sp-bottom-nav){
   flex:1 1 auto!important;
   min-height:0!important;
+  height:calc(100dvh - var(--sp-np-bar-height, 0px) - 56px)!important;
+  max-height:calc(100dvh - var(--sp-np-bar-height, 0px) - 56px)!important;
+  height:calc(100vh - var(--sp-np-bar-height, 0px) - 56px)!important;
+  max-height:calc(100vh - var(--sp-np-bar-height, 0px) - 56px)!important;
   overflow-y:auto!important;
   overflow-x:hidden!important;
-  padding-bottom:calc(var(--sp-np-bar-height, 0px) + 56px)!important;
 }
 #sp-bottom-nav{
   position:fixed!important;
@@ -862,7 +865,7 @@ div[data-testid=main-view]>*:not(#sp-bottom-nav){
   bottom:0!important;
   width:100%!important;
   height:56px;
-  background:#000!important; /* keep non-transparent */
+  background:#000!important;
   border:none!important;
   border-top:1px solid #666!important;
   box-shadow:none!important;
@@ -899,7 +902,7 @@ aside[data-testid=now-playing-bar]{
   position:fixed!important;
   left:0!important;
   right:0!important;
-  bottom:56px!important; /* sits above bottom nav */
+  bottom:56px!important;
   z-index:9998!important;
   box-shadow:none!important;
   background:#000!important;
