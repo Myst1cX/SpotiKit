@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SpotiKitUI worky revert
+// @name         SpotiKitUI maybe
 // @namespace    https://github.com/Myst1cX/SpotiKit
 // @version      7.3.2.fork
 // @description  Mobile-like layout for Spotify Web, plus visual premium spoof & ad-slot removal
@@ -852,14 +852,17 @@ div[data-testid=main-view]>*:not(#sp-bottom-nav){
   flex:1 1 auto!important;
   min-height:0!important;
   overflow-y:auto!important;
-  overflow-x:hidden!important
+  overflow-x:hidden!important;
+  padding-bottom:calc(var(--sp-np-bar-height, 0px) + 56px)!important;
 }
 #sp-bottom-nav{
-  flex:0 0 auto!important;
-  position:static;
-  width:100%;
+  position:fixed!important;
+  left:0!important;
+  right:0!important;
+  bottom:0!important;
+  width:100%!important;
   height:56px;
-  background:#000!important;
+  background:#000!important; /* keep non-transparent */
   border:none!important;
   border-top:1px solid #666!important;
   box-shadow:none!important;
@@ -867,6 +870,7 @@ div[data-testid=main-view]>*:not(#sp-bottom-nav){
   align-items:center;
   justify-content:space-around;
   padding:0 8px;
+  z-index:9999!important;
   contain:layout style paint
 }
 #sp-bottom-nav button{
