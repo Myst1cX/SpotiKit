@@ -25,7 +25,7 @@
 
 // RESOLVED (7.3.2.fork, Myst1cX):
 
-// First batch: 
+// First batch:
 // Restored extra features from the MobileDesktop 7.3.1.fork: the visual premium spoof (badge/text relabeling,
 // replaced-text logging, forced-English locale spoof) and the account/payments-site blockers & redirects
 
@@ -834,30 +834,40 @@ body.sp-search #global-nav-bar{display:flex!important}
 #global-nav-bar button[data-testid=home-button],
 #global-nav-bar a[aria-label*="Home"]{display:none!important}
 
+/* spotifuck's way: nothing here is taken out of flow, so nothing needs its
+   height measured or subtracted. .Root__main-view becomes a column flexbox;
+   its normal-flow children (the real page content) share the flexible space
+   and scroll internally, while #sp-bottom-nav - also just a normal last
+   child now, not position:fixed - keeps its natural height and the browser
+   reserves that space for free. */
+.Root__main-view,
+div[data-testid=main-view]{
+  display:flex!important;
+  flex-direction:column!important;
+  height:100%!important;
+  overflow:hidden!important
+}
+.Root__main-view>*:not(#sp-bottom-nav),
+div[data-testid=main-view]>*:not(#sp-bottom-nav){
+  flex:1 1 auto!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important
+}
 #sp-bottom-nav{
-  position:fixed;
-  bottom:0;
-  left:0;
-  right:0;
+  flex:0 0 auto!important;
+  position:static;
+  width:100%;
   height:56px;
-  background:transparent!important;
-  background-image:linear-gradient(to top,rgba(0,0,0,1) 0%,rgba(0,0,0,0.85) 40%,rgba(0,0,0,0.5) 75%,rgba(0,0,0,0) 100%)!important;
+  background:#000!important;
   border:none!important;
+  border-top:1px solid #666!important;
   box-shadow:none!important;
   display:flex;
   align-items:center;
   justify-content:space-around;
-  z-index:9999;
   padding:0 8px;
-  pointer-events:none;
   contain:layout style paint
-}
-body:has(#sp-bottom-nav) .Root__main-view,
-body:has(#sp-bottom-nav) div[data-testid=main-view]{
-  height:calc(100vh - 56px - var(--sp-np-bar-height, 64px))!important;
-  max-height:calc(100vh - 56px - var(--sp-np-bar-height, 64px))!important;
-  overflow-y:auto!important;
-  overflow-x:hidden!important
 }
 #sp-bottom-nav button{
   flex:1;
@@ -872,8 +882,7 @@ body:has(#sp-bottom-nav) div[data-testid=main-view]{
   cursor:pointer;
   padding:4px 0;
   transition:color 0.15s;
-  height:100%;
-  pointer-events:auto
+  height:100%
 }
 #sp-bottom-nav button.active{color:#fff}
 #sp-bottom-nav button svg{width:24px;height:24px;fill:currentColor}
@@ -883,16 +892,12 @@ body:has(#sp-bottom-nav) div[data-testid=main-view]{
 aside[data-testid=now-playing-bar]{
   min-width:100%!important;
   margin:0!important;
-  position:fixed!important;
-  left:0!important;
-  right:0!important;
+  flex:0 0 auto!important;
   box-shadow:none!important;
   background:#000!important;
   border:none!important;
   border-top:1px solid #666!important;
   border-radius:0!important;
-  bottom:56px!important;
-  z-index:30!important;
   max-height:40vh!important;
   overflow-y:auto!important;
   contain:layout style paint
