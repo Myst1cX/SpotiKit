@@ -873,11 +873,16 @@ div[data-testid=main-view]>*:not(#sp-bottom-nav){
   flex:1 1 auto!important;
   min-height:0!important;
   overflow-y:auto!important;
-  overflow-x:hidden!important
+  overflow-x:hidden!important;
+
+  padding-bottom:calc(var(--sp-np-bar-height,120px) + 56px)!important;
+  box-sizing:border-box!important;
 }
 #sp-bottom-nav{
   flex:0 0 auto!important;
-  position:static;
+  position:sticky!important;
+  bottom:0!important;
+  z-index:10001!important;
   width:100%;
   height:56px;
   background:#000!important;
@@ -923,7 +928,11 @@ aside[data-testid=now-playing-bar]{
   border-radius:0!important;
   max-height:40vh!important;
   overflow-y:auto!important;
-  contain:layout style paint
+  contain:layout style paint;
+
+  position:sticky!important;
+  bottom:56px!important;   /* sits directly above bottom nav */
+  z-index:10000!important; /* below nav, above content */
 }
 
 aside[data-testid=now-playing-bar] button[aria-label*="scroll"],
