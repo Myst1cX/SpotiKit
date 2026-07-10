@@ -31,8 +31,18 @@
 
 // Second batch:
 // Ported spotifuck's AMOLED playback-controls styling (pure #000 background, column-stacked
-// general-controls/player-controls rows, its button scale/margin values) onto the expanded
-// (:not(.minimized)) state of SpotiKit's floating player card. 
+// general-controls/player-controls rows, its button scale/margin values) onto SpotiKit's
+// floating player card.
+
+// Third batch:
+// Removed the collapsed/"minimized" mini-player state entirely - the playback controls card
+// is now always shown expanded, matching spotifuck. Also fixed the main scrollable view
+// (homepage, lyrics, etc.) bleeding through underneath the nav bar and playback controls:
+// those containers were being forced fully transparent, and the space reserved at the
+// bottom of the scroll view for the controls was a hardcoded 64px fallback that never
+// matched the card's real (now always-expanded, variable) height. The scroll view is now
+// clipped to the area above the controls, same as spotifuck, with the reserved space kept
+// in sync with the controls' actual measured height.
 
 (function() {
     'use strict';
@@ -695,58 +705,44 @@
         setupLibraryButton();
         setupLibraryGrid();
         setupSearchInput();
-        setupPlayerToggle();
+        setupNPBarHeightSync();
         setupSwipeGestures();
-        setupTextMarquee();
 
         setTimeout(() => {
             setupLibraryButton();
             setupLibraryGrid();
             setupSearchInput();
-            setupPlayerToggle();
+            setupNPBarHeightSync();
             setupSwipeGestures();
-            setupTextMarquee();
         }, 2000);
     }
 
-    function setupPlayerToggle() {
-        const player = document.querySelector('aside[data-testid=now-playing-bar]:not(.processed)');
-        if (!player || player.querySelector('#sp-player-toggle')) return;
-        player.classList.add('processed');
-        const btn = document.createElement('button');
-        btn.id = 'sp-player-toggle';
-        btn.setAttribute('aria-label', 'Toggle player');
-        player.appendChild(btn);
-        btn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            player.classList.toggle('minimized');
-            sessionStorage.setItem('sp_player_minimized', player.classList.contains('minimized'));
-        });
-
-        const pauseBtn = document.createElement('button');
-        pauseBtn.id = 'sp-pause-btn';
-        pauseBtn.setAttribute('aria-label', 'Play/Pause');
-        const PLAY_SVG = '<svg role="img" height="16" width="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 1.713a.7.7 0 0 1 1.05-.607l10.89 6.288a.7.7 0 0 1 0 1.212L4.05 14.894A.7.7 0 0 1 3 14.288V1.713z"></path></svg>';
-        const PAUSE_SVG = '<svg role="img" height="16" width="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2.7 1a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7H2.7zm8 0a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7h-2.6z"></path></svg>';
-        pauseBtn.innerHTML = PLAY_SVG;
-        player.appendChild(pauseBtn);
-        pauseBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const spotifyPlay = document.querySelector('button[data-testid=control-button-playpause]');
-            if (spotifyPlay) spotifyPlay.click();
-        });
-        function updatePauseIcon() {
-            const spotifyPlay = document.querySelector('button[data-testid=control-button-playpause]');
-            if (spotifyPlay) {
-                const label = spotifyPlay.getAttribute('aria-label') || '';
-                pauseBtn.innerHTML = label.toLowerCase().includes('pause') ? PAUSE_SVG : PLAY_SVG;
-            }
+    // Collapsed/"minimized" mini-player state has been removed - the playback
+    // controls card is now always shown in its full (expanded) form, same as
+    // spotifuck. What used to gate the mini-player's compact height (a hardcoded
+    // 64px fallback for --sp-np-bar-height) no longer matches reality now that
+    // the card's real height varies with its content, so we measure it for real
+    // and keep --sp-np-bar-height in sync - that's what the CSS uses to reserve
+    // exactly enough space at the bottom of the scrollable main view, instead of
+    // main-view filling the whole viewport behind the (opaque) controls.
+    let npBarResizeObserver = null;
+    function updateNPBarHeightVar() {
+        const player = document.querySelector('aside[data-testid=now-playing-bar]');
+        if (player) {
+            document.documentElement.style.setProperty('--sp-np-bar-height', player.offsetHeight + 'px');
         }
-        setInterval(updatePauseIcon, 1500);
-        setTimeout(updatePauseIcon, 500);
-
-        if (sessionStorage.getItem('sp_player_minimized') === 'true') {
-            player.classList.add('minimized');
+    }
+    function setupNPBarHeightSync() {
+        const player = document.querySelector('aside[data-testid=now-playing-bar]');
+        if (!player) return;
+        updateNPBarHeightVar();
+        if (!npBarResizeObserver && typeof ResizeObserver !== 'undefined') {
+            npBarResizeObserver = new ResizeObserver(() => updateNPBarHeightVar());
+            npBarResizeObserver.observe(player);
+        }
+        if (!player.dataset.heightSyncReady) {
+            player.dataset.heightSyncReady = '1';
+            window.addEventListener('resize', updateNPBarHeightVar);
         }
     }
 
@@ -777,45 +773,6 @@
         widget.style.touchAction = 'pan-y';
     }
 
-    function setupTextMarquee() {
-        const player = document.querySelector('aside[data-testid=now-playing-bar]');
-        if (!player) return;
-        if (player.dataset.marqueeReady !== '1') {
-            player.dataset.marqueeReady = '1';
-            const obs = new MutationObserver(() => applyMarquee());
-            obs.observe(player, {childList:true, subtree:true, characterData:true});
-        }
-        applyMarquee();
-    }
-
-    function applyMarquee() {
-        const sel = 'aside[data-testid=now-playing-bar].minimized div[data-testid=now-playing-widget] > div:nth-child(2) > div:first-child a, ' +
-                    'aside[data-testid=now-playing-bar].minimized div[data-testid=now-playing-widget] > div:nth-child(2) > div:last-child span';
-        document.querySelectorAll(sel).forEach(el => {
-            if (!el.parentElement || !el.parentElement.closest('.minimized')) return;
-            const existing = el.querySelector('.sp-marquee-inner');
-            if (existing) {
-                if (el.scrollWidth <= el.clientWidth) {
-                    el.textContent = existing.textContent;
-                }
-                return;
-            }
-            if (el.scrollWidth <= el.clientWidth) return;
-            const text = el.textContent;
-            const inner = document.createElement('span');
-            inner.className = 'sp-marquee-inner';
-            inner.textContent = text;
-            el.textContent = '';
-            el.appendChild(inner);
-            const dist = inner.scrollWidth - el.clientWidth;
-            if (dist > 0) {
-                el.style.setProperty('--marquee-dist', dist + 'px');
-                const duration = Math.max(4, Math.round(dist / 30));
-                inner.style.animation = `marquee ${duration}s ease-in-out infinite`;
-            }
-        });
-    }
-
     function startDOMObserver() {
         if (domObserver) return;
         domObserver = new MutationObserver(() => {
@@ -836,8 +793,6 @@
         const style = document.createElement('style');
         style.textContent = `
 body{min-width:100%!important;min-height:100%!important}
-body,div[data-testid=root],.Root__top-container,.Root__now-playing-bar{background:transparent!important}
-aside[data-testid=now-playing-bar]>div,.Root__now-playing-bar>div,.Root__now-playing-bar{background:transparent!important}
 .os-scrollbar{--os-size:6px!important}
 .contentSpacing{padding:0}
 div[data-testid=root]{--panel-gap:0!important;--content-spacing:10px}
@@ -909,6 +864,7 @@ body:has(#sp-bottom-nav) div[data-testid=main-view]{
 #sp-bottom-nav button svg{width:24px;height:24px;fill:currentColor}
 #sp-bottom-nav button span{font-size:10px;letter-spacing:0.5px}
 
+/* Collapsed/"minimized" mini-player state removed - always shown expanded, like spotifuck. */
 aside[data-testid=now-playing-bar]{
   min-width:100%!important;
   margin:0!important;
@@ -922,161 +878,9 @@ aside[data-testid=now-playing-bar]{
   border-radius:0!important;
   bottom:56px!important;
   z-index:30!important;
-  transition:transform 0.3s cubic-bezier(0.4,0,0.2,1),max-height 0.35s cubic-bezier(0.4,0,0.2,1)!important;
+  max-height:40vh!important;
   overflow-y:auto!important;
   contain:layout style paint
-}
-aside[data-testid=now-playing-bar]:not(.minimized){
-  max-height:40vh!important
-}
-
-aside[data-testid=now-playing-bar].minimized{
-  height:64px!important;
-  min-height:64px!important;
-  max-height:64px!important;
-  border-radius:0!important;
-  background:#000!important;
-  padding:0!important;
-  overflow:hidden!important
-}
-aside[data-testid=now-playing-bar].minimized [data-testid=progress-bar],
-aside[data-testid=now-playing-bar].minimized [role=progressbar],
-aside[data-testid=now-playing-bar].minimized [data-testid=playback-position],
-aside[data-testid=now-playing-bar].minimized [data-testid=playback-duration],
-aside[data-testid=now-playing-bar].minimized [data-testid=playback-progressbar],
-aside[data-testid=now-playing-bar].minimized button[aria-label*="repeat"],
-aside[data-testid=now-playing-bar].minimized button[data-testid="lyrics-button"],
-aside[data-testid=now-playing-bar].minimized button[data-testid="control-button-queue"],
-aside[data-testid=now-playing-bar].minimized button[data-testid="pip-toggle-button"],
-aside[data-testid=now-playing-bar].minimized button[data-testid="fullscreen-mode-button"],
-aside[data-testid=now-playing-bar].minimized button[aria-label*="device"],
-aside[data-testid=now-playing-bar].minimized [aria-label="Switch to video"],
-aside[data-testid=now-playing-bar].minimized [title="Switch to video"]+span,
-aside[data-testid=now-playing-bar].minimized [data-testid="volume-bar"],
-aside[data-testid=now-playing-bar].minimized div[data-testid=now-playing-widget]>div:last-child,
-aside[data-testid=now-playing-bar].minimized div[data-testid=player-controls],
-aside[data-testid=now-playing-bar].minimized div[data-testid=general-controls]{
-  display:none!important
-}
-aside[data-testid=now-playing-bar].minimized div[data-testid=now-playing-widget]>div:nth-child(2){
-  max-width:none!important;
-  display:flex!important;
-  flex-direction:column!important;
-  justify-content:center!important;
-  gap:2px!important;
-  min-width:0!important;
-  height:100%!important;
-  overflow:visible!important
-}
-aside[data-testid=now-playing-bar].minimized>div:first-child{
-  display:flex!important;
-  flex-direction:row!important;
-  align-items:center!important;
-  gap:2px!important;
-  padding:0 46px 0 8px!important;
-  height:100%!important
-}
-aside[data-testid=now-playing-bar].minimized div[data-testid=now-playing-widget]{
-  flex:1!important;
-  min-width:0!important;
-  display:flex!important;
-  flex-direction:row!important;
-  align-items:center!important;
-  gap:6px!important;
-  height:100%!important
-}
-aside[data-testid=now-playing-bar].minimized div[data-testid=now-playing-widget]>div:first-child{
-  width:40px!important;
-  height:40px!important;
-  min-width:40px!important;
-  flex-shrink:0!important;
-  border-radius:4px!important;
-  overflow:hidden!important
-}
-aside[data-testid=now-playing-bar].minimized div[data-testid=now-playing-widget]>div:first-child img{
-  width:100%!important;
-  height:100%!important;
-  border-radius:4px!important;
-  object-fit:cover!important
-}
-aside[data-testid=now-playing-bar].minimized div[data-testid=now-playing-widget]>div:nth-child(2)>*{
-  margin:0!important;
-  padding:0!important;
-  line-height:1.2!important;
-  flex:none!important
-}
-aside[data-testid=now-playing-bar].minimized div[data-testid=now-playing-widget]>div:nth-child(2)>div:first-child a{
-  display:block!important;
-  white-space:nowrap!important;
-  overflow:hidden!important;
-  max-width:100%!important;
-  font-size:15px!important;
-  line-height:1.2!important;
-  font-weight:700!important;
-  color:#fff!important;
-  margin:0!important;
-  padding:0!important
-}
-aside[data-testid=now-playing-bar].minimized div[data-testid=now-playing-widget]>div:nth-child(2)>div:last-child span{
-  display:block!important;
-  white-space:nowrap!important;
-  overflow:hidden!important;
-  max-width:100%!important;
-  font-size:13px!important;
-  line-height:1.2!important;
-  font-weight:400!important;
-  color:rgba(255,255,255,0.5)!important;
-  margin:0!important;
-  padding:0!important
-}
-@keyframes marquee{
-  0%,15%{transform:translateX(0)}
-  50%,65%{transform:translateX(calc(-1 * var(--marquee-dist,0px)))}
-  100%{transform:translateX(0)}
-}
-.sp-marquee-inner{
-  display:inline-block;
-  white-space:nowrap
-}
-
-
-
-#sp-player-toggle{
-  position:absolute;
-  top:4px;
-  left:50%;
-  transform:translateX(-50%);
-  width:40px;
-  height:5px;
-  border-radius:3px;
-  background:rgba(255,255,255,0.2);
-  border:none;
-  cursor:pointer;
-  z-index:10;
-  padding:0;
-  transition:background 0.2s, width 0.2s
-}
-#sp-player-toggle:hover{background:rgba(255,255,255,0.4);width:50px}
-
-#sp-pause-btn{
-  display:none;
-  position:absolute;
-  right:10px;
-  top:50%;
-  transform:translateY(-50%);
-  color:rgba(255,255,255,0.85);
-  cursor:pointer;
-  z-index:10;
-  border:none;
-  background:none;
-  padding:10px;
-  line-height:0;
-  transition:color 0.15s
-}
-#sp-pause-btn:hover{color:#fff}
-#sp-pause-btn svg{width:20px;height:20px;display:block}
-aside[data-testid=now-playing-bar].minimized #sp-pause-btn{
-  display:block
 }
 
 aside[data-testid=now-playing-bar] button[aria-label*="scroll"],
@@ -1086,27 +890,26 @@ aside[data-testid=now-playing-bar] [class*="Chevron"],
 aside[data-testid=now-playing-bar] button[aria-label*="Play from"],
 aside[data-testid=now-playing-bar] button[aria-label*="Queue"]{display:none!important}
 
-/* --- AMOLED playback controls (ported from spotifuck), scoped to the expanded card --- */
-aside[data-testid=now-playing-bar]:not(.minimized)>div:first-child{
+/* --- AMOLED playback controls (ported from spotifuck) --- */
+aside[data-testid=now-playing-bar]>div:first-child{
   flex-direction:column!important;
   height:auto!important;
   margin-top:2px;
   padding:6px 8px 4px!important
 }
 aside[data-testid=now-playing-bar]>div>div{width:100%!important}
-aside[data-testid=now-playing-bar]:not(.minimized)>div>div:last-child>div{min-height:32px;margin:5px 10px}
-aside[data-testid=now-playing-bar]:not(.minimized)>div>div:last-child button{transform:scale(1.15);margin:0 5px}
-aside[data-testid=now-playing-bar]:not(.minimized) div[data-testid=general-controls]{margin:15px 0 25px!important}
-aside[data-testid=now-playing-bar]:not(.minimized) div[data-testid=general-controls] button{transform:scale(1.4)!important;margin:0 8px!important}
-aside[data-testid=now-playing-bar]:not(.minimized) div[data-testid=player-controls]{margin:5px 0!important}
-aside[data-testid=now-playing-bar]:not(.minimized) div[data-testid=now-playing-widget]{justify-content:center;overflow:hidden}
-aside[data-testid=now-playing-bar]:not(.minimized) div[data-testid=now-playing-widget]>div:last-child>button{transform:scale(1.3)}
-aside[data-testid=now-playing-bar]:not(.minimized) div[data-testid=now-playing-widget]>div:nth-child(2){display:flex!important;overflow:hidden!important}
-aside[data-testid=now-playing-bar]:not(.minimized) div[data-testid=now-playing-widget]>div:nth-child(2) span{font-size:13px!important;height:20px!important;margin:0!important}
-aside[data-testid=now-playing-bar]:not(.minimized) div[data-testid=now-playing-widget]>div:nth-child(2)>div{min-width:auto;max-width:66%}
-/* pip-toggle-button is intentionally NOT touched here, so it stays visible/usable in the
-   expanded card exactly like upstream Spotify; it is only hidden while .minimized (see the
-   aside[...].minimized button[data-testid="pip-toggle-button"] rule above). */
+aside[data-testid=now-playing-bar]>div>div:last-child>div{min-height:32px;margin:5px 10px}
+aside[data-testid=now-playing-bar]>div>div:last-child button{transform:scale(1.15);margin:0 5px}
+aside[data-testid=now-playing-bar] div[data-testid=general-controls]{margin:15px 0 25px!important}
+aside[data-testid=now-playing-bar] div[data-testid=general-controls] button{transform:scale(1.4)!important;margin:0 8px!important}
+aside[data-testid=now-playing-bar] div[data-testid=player-controls]{margin:5px 0!important}
+aside[data-testid=now-playing-bar] div[data-testid=now-playing-widget]{justify-content:center;overflow:hidden}
+aside[data-testid=now-playing-bar] div[data-testid=now-playing-widget]>div:last-child>button{transform:scale(1.3)}
+aside[data-testid=now-playing-bar] div[data-testid=now-playing-widget]>div:nth-child(2){display:flex!important;overflow:hidden!important}
+aside[data-testid=now-playing-bar] div[data-testid=now-playing-widget]>div:nth-child(2) span{font-size:13px!important;height:20px!important;margin:0!important}
+aside[data-testid=now-playing-bar] div[data-testid=now-playing-widget]>div:nth-child(2)>div{min-width:auto;max-width:66%}
+/* pip-toggle-button is intentionally NOT touched here, so it stays visible/usable exactly
+   like upstream Spotify. */
 
 input[data-testid="search-input"],
 input[aria-label="What do you want to play?"]{display:none!important}
