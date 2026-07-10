@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SpotiKitUI worky 3
+// @name         SpotiKitUI worky 4
 // @namespace    https://github.com/Myst1cX/SpotiKit
 // @version      7.3.2.fork
 // @description  Mobile-like layout for Spotify Web, plus visual premium spoof & ad-slot removal
@@ -758,6 +758,152 @@
         }
     }
 
+// --- NPV lock: hide by default, allow artwork-opened NPV ---
+(function setupNPVLock() {
+
+    const styleId = 'lyricsplus-hide-npv-style';
+
+    if (!document.getElementById(styleId)) {
+
+        const style = document.createElement('style');
+        style.id = styleId;
+
+        style.textContent = `
+
+        .zjCIcN96KsMfWwRo.npv-locked:has([aria-label="Now playing view"]),
+        .zjCIcN96KsMfWwRo.npv-locked:has(.NowPlayingView) {
+
+            min-width:0 !important;
+            max-width:0 !important;
+            flex-basis:0 !important;
+            overflow:hidden !important;
+        }
+
+
+        .wJiY1vDfuci2a4db {
+            display:none !important;
+        }
+
+        `;
+
+        document.head.appendChild(style);
+    }
+
+
+    let artworkOpened = false;
+
+
+    function updateNPVLock() {
+
+        const npv =
+            document.querySelector(
+                '.a_fKt7xvd8od_kEb'
+            );
+
+        if (!npv) return;
+
+
+        const panel =
+            npv.querySelector(
+                '.zjCIcN96KsMfWwRo'
+            );
+
+        if (!panel) return;
+
+
+        const open =
+            npv.getAttribute('aria-hidden') === 'false';
+
+
+        if (artworkOpened && open) {
+
+            panel.classList.remove(
+                'npv-locked'
+            );
+
+        } else {
+
+            panel.classList.add(
+                'npv-locked'
+            );
+
+        }
+
+
+        if (!open) {
+
+            artworkOpened = false;
+
+        }
+
+    }
+
+
+
+    document.addEventListener('click', e => {
+
+        if (
+            e.target.closest(
+                '[data-testid="cover-art-button"]'
+            )
+        ) {
+
+            artworkOpened = true;
+
+            requestAnimationFrame(updateNPVLock);
+        }
+
+    }, true);
+
+
+
+    function attachObserver() {
+
+        const npv =
+            document.querySelector(
+                '.a_fKt7xvd8od_kEb'
+            );
+
+        if (!npv) return;
+
+
+        new MutationObserver(() => {
+
+            updateNPVLock();
+
+        }).observe(npv,{
+            subtree:true,
+            attributes:true,
+            attributeFilter:[
+                'aria-hidden'
+            ]
+        });
+
+
+        updateNPVLock();
+
+    }
+
+
+    const wait =
+        setInterval(() => {
+
+            if (
+                document.querySelector(
+                    '.a_fKt7xvd8od_kEb'
+                )
+            ) {
+
+                clearInterval(wait);
+                attachObserver();
+
+            }
+
+        },500);
+
+
+})();
+
     function setupSwipeGestures() {
         const player = document.querySelector('aside[data-testid=now-playing-bar]');
         if (!player || player.dataset.swipeReady) return;
@@ -815,13 +961,10 @@ div[data-testid=root]{--panel-gap:0!important;--content-spacing:10px}
 #global-nav-bar a[href="/download"],
 button[data-testid=fullscreen-mode-button],
 div.main-view-container__mh-footer-container,
-a[href="/download"]{display:none!important}
-
-/*
+a[href="/download"],
 button[aria-label="Show Now Playing view"],
-button[aria-label="Hide Now Playing view"]
+button[aria-label="Hide Now Playing view"],
 {display:none!important}
-*/
 
 /* Superseded by visual premium spoof (runPremium/premiumPass JS logic, which already
    hides button[data-testid=upgrade-button] with logChange logging, and rebuilds
