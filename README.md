@@ -67,7 +67,7 @@ Two scripts, pick one:
 
 ## Installation
  
-> 1. Download a userscript manager (Recommended: [Violentmonkey](https://violentmonkey.github.io/) or [Tampermonkey](https://www.tampermonkey.net/).)     
+> 1. Download a userscript manager (Recommended: [Violentmonkey](https://violentmonkey.github.io/) or [Tampermonkey](https://www.tampermonkey.net/))     
 > 2. Choose the version you need. The raw link below will pop the install dialog for you.   
 > a) SpotiwebJS (Desktop, visual premium spoof only): [here](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.js)     
 > b) SpotiKitMobileDesktop (my 7.31.fork, mobile-like layout + visual premium spoof): [here](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)     
