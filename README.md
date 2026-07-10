@@ -61,8 +61,8 @@ Two scripts, pick one:
 * * *
 
 > **NOTE:** This is an experimental build. There may be bugs with the library view.    
-> The original dev has resumed work since. Get SpotiKitUI, the updated version, [here](https://github.com/kitbodega/SpotiKit/blob/main/SpotiKitUI.js).
-> SpotiKitUI focused on the mobile-like enhancement aspect. Other features (ad-slot cleanup and visual premium spoof, with which also came the logging of replaced text nodes and a forced english locale spoof are no longer present.   
+> The original dev has resumed work since. Get SpotiKitUI, the updated version, [here](https://github.com/kitbodega/SpotiKit/blob/main/SpotiKitUI.js).    
+> SpotiKitUI focused on the mobile-like enhancement aspect. Other features (ad-slot cleanup and visual premium spoof, with which also came the logging of replaced text nodes and a forced english locale spoof are no longer present there).   
 
 > You may also consider my own mobile script: [Spotifuck Userscript](https://github.com/Myst1cX/spotifuck-userscript/blob/main/spotifuck-v6.user.js).    
 > Check out [Spotifuck's README & Installation Guide](https://github.com/Myst1cX/spotifuck-userscript/blob/main/README.md).   
