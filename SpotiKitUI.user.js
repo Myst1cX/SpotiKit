@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SpotiKitUI worky 2
+// @name         SpotiKitUI worky 2 now amoled
 // @namespace    https://github.com/Myst1cX/SpotiKit
 // @version      7.3.2.fork
 // @description  Mobile-like layout for Spotify Web, plus visual premium spoof & ad-slot removal
@@ -833,6 +833,23 @@ button[data-testid=upgrade-button]
 body.sp-search #global-nav-bar{display:flex!important}
 #global-nav-bar button[data-testid=home-button],
 #global-nav-bar a[aria-label*="Home"]{display:none!important}
+/* --- Full AMOLED theme (ported behavior from spotifuck) --- */
+.encore-dark-theme{
+  --background-base:#000!important;
+  --background-highlight:#000!important;
+  --background-elevated-base:#000!important;
+  --background-elevated-highlight:#000!important;
+  --background-elevated-press:#000!important;
+  --background-tinted-base:#000!important;
+  --background-tinted-highlight:#000!important;
+  --background-tinted-press:#000!important;
+  --background-unsafe-for-small-text-base:#000!important;
+  --background-unsafe-for-small-text-highlight:#000!important;
+  --background-unsafe-for-small-text-press:#000!important;
+}
+html, body, div[data-testid=root], .Root__top-container{
+  background:#000!important;
+}
 
 /* spotifuck's way: nothing here is taken out of flow, so nothing needs its
    height measured or subtracted. .Root__main-view becomes a column flexbox;
