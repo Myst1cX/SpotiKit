@@ -9,7 +9,7 @@ Two scripts, pick one:
 >
 > **SpotiKitMobileDesktop**: everything SpotiwebJS does, plus a full mobile-like layout on open.spotify.com (floating player, bottom nav, library-as-overlay). Already includes the desktop script's features, so don't install both.    
 > **NOTE**: An updated version of the mobile script (now called SpotiKitUI) can be found [here](https://github.com/kitbodega/SpotiKit/blob/main/SpotiKitUI.js) - the original dev has resumed work.   
-> SpotiKitUI focused on the mobile-like enhancement aspect. Other features (ad-slot cleanup and visual premium spoof, with which also came the logging of replaced text nodes and a forced english locale spoof are no longer present.   
+> SpotiKitUI focused on the mobile-like enhancement aspect. Other features (ad-slot cleanup and visual premium spoof, with which also came the logging of replaced text nodes and a forced english locale spoof are no longer present).   
 
 ## Features
 
