@@ -8,9 +8,11 @@ Two scripts, pick one:
 > **SpotiwebJS**: premium spoof + ad-slot removal only. No layout changes. Use this if you want Spotify's normal desktop UI left alone.
 >
 > **SpotiKitMobileDesktop**: everything SpotiwebJS does, plus a full mobile-like layout on open.spotify.com (floating player, bottom nav, library-as-overlay). Already includes the desktop script's features, so don't install both.    
-> **NOTE**: An updated version of the mobile script (now called SpotiKitUI) can be found [here](https://github.com/kitbodega/SpotiKit/blob/main/SpotiKitUI.js) - the original dev has resumed work from the SpotiKitMobileDesktop fork's base.
+> **NOTE**: An updated version of the mobile script (now called SpotiKitUI) can be found [here](https://github.com/kitbodega/SpotiKit/blob/main/SpotiKitUI.js) - the original dev has resumed work. SpotiKitUI focused on the mobile-like enhancement aspect. Other features (ad-slot cleanup and visual premium spoof, with which also came the logging of replaced text nodes and a forced english locale spoof are no longer present.   
 
 ## Features
+
+> **MOBILE-LIKE UI ENHANCEMENT**  
 
 > **FORCE ENGLISH**  
 > Overrides `navigator.language`, strips non-English `/intl-xx/` and region paths, and flips your account's actual language setting at `open.spotify.com/preferences` through a hidden iframe - reloads, verifies it stuck, retries a few times if not.  
@@ -58,7 +60,8 @@ Two scripts, pick one:
 * * *
 
 > **NOTE:** This is an experimental build. There may be bugs with the library view.    
-> The original dev has resumed work since. Get SpotiKitUI, the updated version, [here](https://github.com/kitbodega/SpotiKit/blob/main/SpotiKitUI.js).   
+> The original dev has resumed work since. Get SpotiKitUI, the updated version, [here](https://github.com/kitbodega/SpotiKit/blob/main/SpotiKitUI.js).
+> SpotiKitUI focused on the mobile-like enhancement aspect. Other features (ad-slot cleanup and visual premium spoof, with which also came the logging of replaced text nodes and a forced english locale spoof are no longer present.   
 
 > You may also consider my own mobile script: [Spotifuck Userscript](https://github.com/Myst1cX/spotifuck-userscript/blob/main/spotifuck-v6.user.js).    
 > Check out [Spotifuck's README & Installation Guide](https://github.com/Myst1cX/spotifuck-userscript/blob/main/README.md).   
@@ -71,7 +74,7 @@ Two scripts, pick one:
 > 2. Choose the version you need. The raw link below will pop the install dialog for you.   
 > a) SpotiwebJS (Desktop, visual premium spoof only): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.js)     
 > b) SpotiKitMobileDesktop (my 7.31.fork, mobile-like layout + visual premium spoof): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)     
-> c) SpotiKitUI (the successor of SpotiKitMobileDesktop): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
+> c) SpotiKitUI (the successor of SpotiKitMobileDesktop, focus only on mobile-like layout enhancement): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
 > d) Spotifuck Userscript (mobile-like layout + visual premium spoof): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-v6.user.js)     
 > 4. Go to [open.spotify.com](https://open.spotify.com) and reload the page.  
 > 5. On mobile, you will require a few more steps - tricking the browser with a User Agent:   
