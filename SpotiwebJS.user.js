@@ -85,6 +85,23 @@
 // Scoped it behind `html:not(.npv-open)` (unlike spotifuck's unconditional
 // version) so it doesn't squash NPV's own panel while legitimately open.
 
+// Sixth big change - fix for Queue / Connect to a Device not opening on click
+// (ported from Spotifuck v6.10):
+// npvGuardObserver fires on every DOM mutation anywhere in document.body.
+// Clicking Queue's or Connect's own native button flips aria-hidden to false
+// on the shared #Desktop_PanelContainer_Id dock immediately, but the content
+// swap - the <aside>'s aria-label changing from "Now playing view" to
+// "Queue"/"Connect to a device" - lands slightly after. In that window
+// isNpvOpen() read the still-stale "Now playing view" label, userOpenedNPV
+// was false (a Queue/Connect click, not an authorized NPV open), and the
+// guard immediately closed the panel before Queue/Connect's real content
+// ever finished rendering - which is why they appeared not to open at all
+// until NPV had been opened once first. npvGuardObserver now debounces
+// ~150ms after the last mutation before evaluating isNpvOpen(), letting the
+// aria-label swap settle before judging. updateNpvLayoutState() still runs
+// immediately on every mutation (unchanged), only the close-decision is
+// debounced.
+
 // --- Per-site visual premium spoof toggles ---
 // Declared at module scope (not inside either IIFE below) because both the
 // text/badge-spoof IIFE and the separate ad-slot-removal IIFE need to read
@@ -731,22 +748,6 @@ if (HOST_IS_OPEN) {
     // art click). closeNowPlay() resets this to false on every close, and
     // npvGuardObserver auto-closes the panel any time it becomes visible while false.
 
-    let otherPanelOpening = false; // Queue/Connect guard: true for a short window after a
-    // Queue or Connect click, set via capture-phase listener (same trick as the album-art
-    // authorized-opener below) before Spotify's own handler runs. Needed because
-    // npvGuardObserver's childList/subtree observation (below) fires on every DOM mutation
-    // anywhere in document.body, not just the one aria-hidden flip - Spotify's app mutates
-    // constantly, so a single click produces a burst of guard-callback invocations. The flag
-    // can't be cleared after the first of those (that reopens the same race it's meant to
-    // close), so markOtherPanelOpening() below lets it expire on its own short timer instead,
-    // covering the whole opening transition regardless of how many mutations fire during it.
-    let otherPanelOpeningTimer = null;
-    function markOtherPanelOpening() {
-        otherPanelOpening = true;
-        clearTimeout(otherPanelOpeningTimer);
-        otherPanelOpeningTimer = setTimeout(() => { otherPanelOpening = false; }, 500);
-    }
-
     window.closeNowPlay = function(source = 'unknown') {
         userOpenedNPV = false;
         const panelContainer = document.querySelector('#Desktop_PanelContainer_Id');
@@ -784,11 +785,31 @@ if (HOST_IS_OPEN) {
     // native album art click (setupNpvWidgetTrigger). Anything else that makes the
     // panel visible gets auto-closed, since userOpenedNPV only ever becomes true via
     // one of those two paths.
+    //
+    // v6.10 fix (ported from Spotifuck): the guard fires on every DOM mutation
+    // anywhere in document.body (Spotify's app mutates constantly). Clicking Queue's
+    // or Connect's own native button flips aria-hidden to false on the shared dock
+    // immediately, but the content swap - the <aside>'s aria-label changing from
+    // "Now playing view" to "Queue"/"Connect to a device" - lands slightly after. In
+    // that window isNpvOpen() read the still-stale "Now playing view" label,
+    // userOpenedNPV was false (this was a Queue/Connect click, not an authorized NPV
+    // open), and the guard immediately closed the panel before Queue/Connect's real
+    // content finished rendering - which is why Queue/Connect appeared not to open at
+    // all until NPV had been opened once first. Debouncing ~150ms after the last
+    // mutation before evaluating isNpvOpen() lets Spotify's own aria-label swap settle
+    // before judging. updateNpvLayoutState() still runs immediately on every mutation
+    // (unchanged) since that's just a CSS class toggle and doesn't need debouncing.
+    let npvGuardDebounce = null;
     const npvGuardObserver = new MutationObserver(() => {
-        if (isNpvOpen() && !userOpenedNPV && !otherPanelOpening) {
-            window.closeNowPlay('npv-guard-autoclose');
-        }
         updateNpvLayoutState();
+        if (npvGuardDebounce) clearTimeout(npvGuardDebounce);
+        npvGuardDebounce = setTimeout(() => {
+            npvGuardDebounce = null;
+            if (isNpvOpen() && !userOpenedNPV) {
+                window.closeNowPlay('npv-guard-autoclose');
+            }
+            updateNpvLayoutState();
+        }, 150);
     });
     npvGuardObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-hidden'] });
 
@@ -836,24 +857,6 @@ if (HOST_IS_OPEN) {
         artEl.addEventListener('click', () => { userOpenedNPV = true; }, { capture: true });
     };
 
-    // Same authorized-opener trick as setupNpvWidgetTrigger above, but for Queue and
-    // Connect - marks otherPanelOpening=true the instant the click lands (capture phase,
-    // before Spotify's own handler runs), so npvGuardObserver's mutation callback sees it
-    // already set and doesn't mistake the shared panel's still-stale "Now playing view"
-    // label for an unauthorized NPV open.
-    const setupOtherPanelTriggers = () => {
-        const queueBtn = document.querySelector('button[data-testid="control-button-queue"]:not(.fuckd-other-panel)');
-        if (queueBtn) {
-            queueBtn.classList.add('fuckd-other-panel');
-            queueBtn.addEventListener('click', () => { markOtherPanelOpening(); }, { capture: true });
-        }
-        const connectBtn = document.querySelector('button[aria-label="Connect to a device"]:not(.fuckd-other-panel)');
-        if (connectBtn) {
-            connectBtn.classList.add('fuckd-other-panel');
-            connectBtn.addEventListener('click', () => { markOtherPanelOpening(); }, { capture: true });
-        }
-    };
-
     // Poll indefinitely (not just once) until both are set up - the player bar can
     // take longer than a couple seconds to render on open.spotify.com's SPA,
     // especially on a cold load, and a single retry isn't enough to catch that.
@@ -863,11 +866,9 @@ if (HOST_IS_OPEN) {
     // document-idle with no equivalent loop already in place).
     setupNpvButton();
     setupNpvWidgetTrigger();
-    setupOtherPanelTriggers();
     const npvSetupInterval = setInterval(() => {
         setupNpvButton();
         setupNpvWidgetTrigger();
-        setupOtherPanelTriggers();
         if (document.querySelector('.npbtn') && document.querySelector('.fuckd-npv-art')) {
             clearInterval(npvSetupInterval);
         }
