@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SpotiKit++ desktop d
+// @name         SpotiKit++ desktop
 // @namespace    https://github.com/Myst1cX/SpotiKit
 // @version      7.0.fork
 // @description  SpotiKit — visual premium UI overlay for Spotify and ad banner blocking
@@ -25,8 +25,8 @@
 // RESOLVED (7.0.fork, Myst1cX):
 
 // First change:
-// Added proper linking for installing the script via an userscript manager
-// Removed obsolete function that attempted to intercept and block audio ads.
+// Added proper linking for installing the script via an userscript manager 
+// Removed obsolete function that attempted to intercept and block audio ads. 
 
 // Second big change:
 // Text-replacement pass is now scoped to changed nodes instead of walking
@@ -42,7 +42,7 @@
 // compact-banner rebuild, and the Try/Prueba button) so each is only
 // touched and logged once per element instead of re-firing on every tick.
 
-// Third change:
+// Third change: 
 // Added forceEnglish(), which overrides navigator.language/languages to
 // en-US and, on www.spotify.com, redirects non-English-region locale paths
 // (e.g. /mx/, /es/) to /us/ so the page itself loads in English instead of
@@ -58,7 +58,7 @@
 // Added two independent userscript-manager menu toggles (via
 // GM_registerMenuCommand + GM_setValue/GM_getValue). One toggle covers
 // open.spotify.com, the other covers www.spotify.com and payments.spotify.com (plan payment blockers/redirects),
-// each independent and GM-storage-backed, both enabled by default.
+// each independent and GM-storage-backed, both enabled by default. 
 // Added the missing @grant GM_setValue / @grant GM_getValue lines these need.
 // Also fixed forceEnglish(): it previously only spoofed
 // navigator.language/languages and redirected non-English www.spotify.com
@@ -564,7 +564,7 @@ if (typeof GM_registerMenuCommand === 'function') {
                 window.location.href = 'https://www.spotify.com/us/account/profile/';
             };
 
-
+            
             const right = document.createElement('div');
             right.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;row-gap:var(--encore-spacing-tighter-2);padding:var(--encore-spacing-looser) var(--encore-spacing-tighter-2);cursor:pointer;border-left:1px solid #404040;';
             const cardSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -824,16 +824,21 @@ if (HOST_IS_OPEN) {
     };
 
     // The player-bar album art (div[data-testid=now-playing-widget]>div:first-child)
-    // natively opens the Now Playing view on click - a real, reliable Spotify
-    // affordance. A capture-phase listener sets userOpenedNPV=true the instant the
-    // click lands, strictly before Spotify's own bubble-phase handler runs, so by the
-    // time npvGuardObserver's mutation microtask fires, userOpenedNPV is already true
-    // and the guard leaves it alone.
+    // natively TOGGLES the Now Playing view on click - a real, reliable Spotify
+    // affordance. A capture-phase listener sets userOpenedNPV to match what this click
+    // is about to do - open or close, computed from isNpvOpen() same as clickNP() -
+    // strictly before Spotify's own bubble-phase handler runs, so by the time
+    // npvGuardObserver's mutation microtask fires, userOpenedNPV already reflects the
+    // correct state. This must mirror both directions (not just set true): since it's a
+    // native toggle, the closing click never goes through our closeNowPlay() (which is
+    // the only other place that resets the flag), so an unconditional `true` here would
+    // leave the flag stuck true after a close and cause the guard to wrongly trust the
+    // next unrelated native open (e.g. a playlist's play button auto-opening NPV).
     const setupNpvWidgetTrigger = () => {
         const artEl = document.querySelector('div[data-testid="now-playing-widget"]>div:first-child:not(.fuckd-npv-art)');
         if (!artEl) return;
         artEl.classList.add('fuckd-npv-art');
-        artEl.addEventListener('click', () => { userOpenedNPV = true; }, { capture: true });
+        artEl.addEventListener('click', () => { userOpenedNPV = !isNpvOpen(); }, { capture: true });
     };
 
     // Same authorized-opener trick as setupNpvWidgetTrigger above, but for Queue and
@@ -890,21 +895,8 @@ if (HOST_IS_OPEN) {
     // it's legitimately open. Hooked into the same npvGuardObserver mutation
     // callback that already fires on every aria-hidden change - no separate
     // observer needed.
-    // Whether the shared dock panel (NPV/Queue/Connect all use the same
-    // #Desktop_PanelContainer_Id) is visible at all, regardless of which of the
-    // three it's showing. Unlike isNpvOpen(), this only checks aria-hidden - no
-    // aria-label race, since aria-hidden flips immediately and synchronously
-    // with the click, before any content-swap lag. Used for the layout/CSS
-    // width-forcing toggle below, which needs to know "is any panel open" (so
-    // it doesn't squeeze Queue/Connect's width), not "is NPV specifically open".
-    function isDockPanelVisible() {
-        const panelContainer = document.querySelector('#Desktop_PanelContainer_Id');
-        if (!panelContainer) return false;
-        return panelContainer.parentNode.parentNode.ariaHidden === 'false';
-    }
-
     function updateNpvLayoutState() {
-        document.documentElement.classList.toggle('npv-open', isDockPanelVisible());
+        document.documentElement.classList.toggle('npv-open', isNpvOpen());
     }
     updateNpvLayoutState(); // reflect default (closed) state before the panel even exists
 
@@ -937,19 +929,6 @@ if (HOST_IS_OPEN) {
             }
             html:not(.npv-open) #main-view+div>div>div>div:nth-child(2)>div {
                 width: 100vw !important;
-            }
-            /* Native "Show Now Playing view" toggle - hidden unconditionally,
-               independent of npv-open/the width-squeeze above. Confirmed via
-               live DOM inspection that it's always a sibling of the dock's
-               ancestor with a stable wrapper class, plus an aria-label :has()
-               fallback in case that class rotates. Previously this was only
-               hidden as a side effect of the width-squeeze while no panel was
-               open, which meant it came back into view whenever Queue/Connect
-               opened and correctly released the squeeze - this rule is what
-               actually needs to stay on regardless of panel state. */
-            .wJiY1vDfuci2a4db,
-            div:has(>button[aria-label="Show Now Playing view"]) {
-                display: none !important;
             }
         `;
         document.head.appendChild(style);
