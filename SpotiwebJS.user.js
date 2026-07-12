@@ -71,21 +71,7 @@
 // and retries a capped number of times if it didn't.
 
 // Fifth big change:
-// Ported the Now Playing View (NPV) hiding block (open.spotify.com only) 
-// from spotify-web-lyrics-plus userscript, version 17.46. 
-// This is just a hotfix since that script has been refactored to a different NPV approach. (
-// The web version will eventually receive it aswell. Now I am doing further testing
-// The method I just ported collapses the native `.zjCIcN96KsMfWwRo` right-side panel 
-// container to zero width specifically when it's showing NPV (matched via
-// aria-label="Now playing view" or a .NowPlayingView class, so Queue and
-// Connect to a Device - which share the same container - are left alone),
-// and hides Spotify's own native "Show Now Playing view" toggle button
-// (`.wJiY1vDfuci2a4db`) so it's not left as a stray clickable/draggable
-// element. Both are hardcoded hashed classes rather than stable
-// aria-label-based selectors, so may need updating if Spotify changes its
-// CSS-in-JS build. NPV's DOM stays fully present (not removed) - only
-// visually collapsed - so it's still accessible to JS for track info/
-// lyrics fetching (was once needed for Spotify provider but not anymore).
+// add changelog
 
 // --- Per-site visual premium spoof toggles ---
 // Declared at module scope (not inside either IIFE below) because both the
@@ -715,27 +701,181 @@ if (typeof GM_registerMenuCommand === 'function') {
 })();
 
 if (HOST_IS_OPEN) {
-    /* NowPlayingView logic: Using the original `.zjCIcN96KsMfWwRo` container approach.
-        The `.zjCIcN96KsMfWwRo` is the panel where NPV, Queue, and Connect a device are all displayed after clicking their respective buttons.
-        We apply the hiding style ONLY when .zjCIcN96KsMfWwRo contains NowPlayingView (identified by aria-label="Now playing view" or .NowPlayingView class).
-        This ensures Queue and Connect modals remain unaffected while NowPlayingView is hidden.
-        The container is collapsed to zero width, allowing the rest of the UI to expand and fill the area.
-        NowPlayingView and its DOM structure remain fully accessible to JavaScript for track information and lyrics fetching (ProviderSpotify needs it).
+    /* NowPlayingView guard system - ported 1:1 from Spotifuck's clickNP() /
+        closeNowPlay() / isNpvOpen() / npvGuardObserver, replacing the old
+        standalone `.zjCIcN96KsMfWwRo` zero-width-collapse block. NPV now
+        opens/closes for real (visible, not permanently collapsed) through
+        the same native toggle-button-click Spotify itself uses, and can
+        only be opened via one of two authorized paths - our own npBtn
+        (inserted next to the native lyrics button) or a genuine click on
+        the player-bar album art. Any other open (a stray native toggle,
+        Spotify itself, another script) gets auto-closed by
+        npvGuardObserver. NPV's own DOM (#Desktop_PanelContainer_Id) is
+        never removed, only shown/hidden via Spotify's own aria-hidden
+        mechanism, so it stays fully accessible to JS for track info/
+        lyrics fetching even while closed.
     */
-    const styleId = 'lyricsplus-hide-npv-style';
+    let userOpenedNPV = false; // true right after an authorized open (npBtn or album
+    // art click). closeNowPlay() resets this to false on every close, and
+    // npvGuardObserver auto-closes the panel any time it becomes visible while false.
+
+    window.closeNowPlay = function(source = 'unknown') {
+        userOpenedNPV = false;
+        const panelContainer = document.querySelector('#Desktop_PanelContainer_Id');
+        if (!panelContainer) return;
+        const ariaHidden = panelContainer.parentNode.parentNode.ariaHidden;
+        if (ariaHidden === 'false') {
+            const toggleBtn = panelContainer.parentNode.parentNode.nextElementSibling?.querySelector('button');
+            if (toggleBtn) toggleBtn.click();
+        }
+    };
+
+    function isNpvOpen() {
+        const panelContainer = document.querySelector('#Desktop_PanelContainer_Id');
+        if (!panelContainer) return false;
+        if (panelContainer.parentNode.parentNode.ariaHidden !== 'false') return false;
+        // #Desktop_PanelContainer_Id is shared by NPV, Queue, and Connect to a Device -
+        // all three flip the same ariaHidden flag, so check the container's own
+        // aria-label/class (not a descendant) to tell NPV apart from the other two.
+        return panelContainer.getAttribute('aria-label') === 'Now playing view'
+            || panelContainer.classList.contains('NowPlayingView');
+    }
+
+    function clickNP(source = 'npBtn-click') {
+        const panelContainer = document.querySelector('#Desktop_PanelContainer_Id');
+        const toggleBtn = panelContainer?.parentNode.parentNode.nextElementSibling?.querySelector('button');
+        if (!toggleBtn) return;
+        const willOpen = !isNpvOpen();
+        userOpenedNPV = willOpen; // set BEFORE the click - npvGuardObserver's mutation
+        // microtask fires before a setTimeout(0) macrotask would, so this has to be set
+        // first or the guard sees the open with the flag still false and undoes it.
+        toggleBtn.click();
+    }
+
+    // Only allow opens via an authorized path - npBtn (clickNP, setupNpvButton) or the
+    // native album art click (setupNpvWidgetTrigger). Anything else that makes the
+    // panel visible gets auto-closed, since userOpenedNPV only ever becomes true via
+    // one of those two paths.
+    const npvGuardObserver = new MutationObserver(() => {
+        if (isNpvOpen() && !userOpenedNPV) {
+            window.closeNowPlay('npv-guard-autoclose');
+        }
+        updateNpvLayoutState();
+    });
+    npvGuardObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-hidden'] });
+
+    // On load, close it if it's already open before any npBtn click has happened.
+    setTimeout(() => {
+        if (isNpvOpen() && !userOpenedNPV) window.closeNowPlay('npv-guard-initial');
+        updateNpvLayoutState();
+    }, 1000);
+
+    // Builds our own Now Playing view toggle button next to the native lyrics button,
+    // since Spotify's own native NPV toggle is unreliable/often absent (and is hidden
+    // below regardless, since npBtn + album art are the authorized ways to open NPV now).
+    const setupNpvButton = () => {
+        if (document.querySelector('.npbtn')) return; // already inserted
+        const lyBtn = document.querySelector('button[data-testid="lyrics-button"]:not(.fuckd-npv)');
+        if (!lyBtn) return;
+        lyBtn.classList.add('fuckd-npv');
+
+        const npBtn = document.createElement('button');
+        // Clone lyBtn's own classes (Spotify's real Encore button classes) so npBtn
+        // automatically gets the same size/padding/hover/scale as every other
+        // player-bar button instead of rendering as an unstyled native <button>.
+        npBtn.className = lyBtn.className.replace('fuckd-npv', '').trim() + ' npbtn';
+        npBtn.setAttribute('aria-label', 'Now Playing view');
+        npBtn.title = 'Now Playing view';
+        npBtn.innerHTML = `<svg data-encore-id="icon" role="img" aria-hidden="true" viewBox="0 0 16 16" style="width:16px;height:16px;fill:currentColor;"><rect x="1.25" y="0.75" width="13.5" height="14.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6 4.5v7l5.5-3.5z" fill="currentColor"/></svg>`;
+        npBtn.addEventListener('click', () => clickNP('npBtn-click'));
+        lyBtn.parentNode.insertBefore(npBtn, lyBtn);
+
+        // Make sure NPV starts closed - at this point only npBtn is wired as an
+        // authorized opener (setupNpvWidgetTrigger runs separately).
+        if (isNpvOpen() && !userOpenedNPV) window.closeNowPlay('npv-guard-init');
+    };
+
+    // The player-bar album art (div[data-testid=now-playing-widget]>div:first-child)
+    // natively opens the Now Playing view on click - a real, reliable Spotify
+    // affordance. A capture-phase listener sets userOpenedNPV=true the instant the
+    // click lands, strictly before Spotify's own bubble-phase handler runs, so by the
+    // time npvGuardObserver's mutation microtask fires, userOpenedNPV is already true
+    // and the guard leaves it alone.
+    const setupNpvWidgetTrigger = () => {
+        const artEl = document.querySelector('div[data-testid="now-playing-widget"]>div:first-child:not(.fuckd-npv-art)');
+        if (!artEl) return;
+        artEl.classList.add('fuckd-npv-art');
+        artEl.addEventListener('click', () => { userOpenedNPV = true; }, { capture: true });
+    };
+
+    // Poll indefinitely (not just once) until both are set up - the player bar can
+    // take longer than a couple seconds to render on open.spotify.com's SPA,
+    // especially on a cold load, and a single retry isn't enough to catch that.
+    // Both setup functions already no-op harmlessly once already-inserted, so
+    // repeated calls are safe. Mirrors Spotifuck's own indefinite pfint polling
+    // (there via document-start + setInterval; here since SpotiwebJS runs at
+    // document-idle with no equivalent loop already in place).
+    setupNpvButton();
+    setupNpvWidgetTrigger();
+    const npvSetupInterval = setInterval(() => {
+        setupNpvButton();
+        setupNpvWidgetTrigger();
+        if (document.querySelector('.npbtn') && document.querySelector('.fuckd-npv-art')) {
+            clearInterval(npvSetupInterval);
+        }
+    }, 1000);
+
+    /* Hide Spotify's own native "Show Now Playing view" toggle - redundant now
+        that npBtn/album art are the authorized ways to open NPV. Confirmed via
+        live DOM inspection: `.wJiY1vDfuci2a4db` is the button's own WRAPPER div
+        (a plain flex sibling of the NPV panel's ancestor, not nested inside it -
+        hiding it is what lets the rest of the UI resize to fill the freed
+        width), and the button itself carries a stable aria-label. Both
+        selectors below resolve to that same wrapper - the hashed class (known
+        to work) plus an aria-label-based :has() as a hash-rotation-proof
+        fallback. NPV's own DOM (#Desktop_PanelContainer_Id) lives entirely
+        outside this wrapper and is untouched by this rule.
+    */
+    // Tracks NPV's real open/closed state as a class on <html>, so the
+    // width-forcing CSS below (which needs to squeeze the native toggle out
+    // of view while NPV is closed) doesn't also squeeze NPV itself out when
+    // it's legitimately open. Hooked into the same npvGuardObserver mutation
+    // callback that already fires on every aria-hidden change - no separate
+    // observer needed.
+    function updateNpvLayoutState() {
+        document.documentElement.classList.toggle('npv-open', isNpvOpen());
+    }
+    updateNpvLayoutState(); // reflect default (closed) state before the panel even exists
+
+    /* Hide Spotify's own native "Show Now Playing view" toggle - ported from
+        Spotifuck's actual working approach (injectCSS) instead of targeting
+        the toggle's own wrapper directly, since that (both the hashed class
+        and the aria-label :has() fallback) didn't reliably hide it here.
+        Spotifuck doesn't hide that wrapper by name at all - it forces
+        #main-view to 100vw with overflow:hidden on the dock region beside it,
+        which crops the toggle (and anything else in that region) off-screen
+        as a side effect. Ported verbatim (native Spotify data-testid/id
+        selectors, not hashed classes) but scoped to html:not(.npv-open) here,
+        unlike Spotifuck's unconditional version - without that scoping this
+        also forces NPV itself to full-width the moment it's legitimately
+        opened, squeezing its own panel out instead of giving it room. NPV's
+        own DOM (#Desktop_PanelContainer_Id) is untouched by this rule.
+    */
+    const styleId = 'npv-guard-hide-native-toggle-style';
     if (!document.getElementById(styleId)) {
         const style = document.createElement('style');
         style.id = styleId;
         style.textContent = `
-            .zjCIcN96KsMfWwRo:has([aria-label="Now playing view"]),
-            .zjCIcN96KsMfWwRo:has(.NowPlayingView) {
-                min-width: 0 !important;
-                max-width: 0 !important;
-                flex-basis: 0 !important;
-                overflow: hidden !important;
+            html:not(.npv-open) div[data-testid=root] {
+                --panel-gap: 0 !important;
             }
-            .wJiY1vDfuci2a4db { /* The "Show Now Playing view" button */
-                display: none !important;
+            html:not(.npv-open) #main-view+div,
+            html:not(.npv-open) #main-view+div>div {
+                overflow: hidden !important;
+                width: auto !important;
+            }
+            html:not(.npv-open) #main-view+div>div>div>div:nth-child(2)>div {
+                width: 100vw !important;
             }
         `;
         document.head.appendChild(style);
