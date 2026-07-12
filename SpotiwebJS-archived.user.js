@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         SpotiKit++ desktop (old)
+// @name         SpotiKit++ desktop (old, archived version)
 // @namespace    https://github.com/Myst1cX/SpotiKit
 // @version      7.0.fork
-// @description  SpotiKit (older version - archival) — visual premium UI overlay for Spotify and ad banner blocking
+// @description  SpotiKit (old npv function - archived version) — visual premium UI overlay for Spotify and ad banner blocking
 // @author       kit_fogos, Myst1cX (fork)
 // @match        https://www.spotify.com/*/account/*
 // @match        https://open.spotify.com/*
@@ -18,8 +18,8 @@
 // @run-at       document-idle
 // @homepageURL  https://github.com/Myst1cX/SpotiKit
 // @supportURL   https://github.com/Myst1cX/SpotiKit/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiWebJS-oldnpvfunction.user.js.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiWebJS-oldnpvfunction.user.js.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiWebJS-archived.user.js.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiWebJS-archived.user.js.js
 // ==/UserScript==
 
 // RESOLVED (7.0.fork, Myst1cX):
