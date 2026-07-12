@@ -85,6 +85,23 @@
 // Scoped it behind `html:not(.npv-open)` (unlike spotifuck's unconditional
 // version) so it doesn't squash NPV's own panel while legitimately open.
 
+// Sixth big change - fix for Queue / Connect to a Device not opening on click
+// (ported from Spotifuck v6.10):
+// npvGuardObserver fires on every DOM mutation anywhere in document.body.
+// Clicking Queue's or Connect's own native button flips aria-hidden to false
+// on the shared #Desktop_PanelContainer_Id dock immediately, but the content
+// swap - the <aside>'s aria-label changing from "Now playing view" to
+// "Queue"/"Connect to a device" - lands slightly after. In that window
+// isNpvOpen() read the still-stale "Now playing view" label, userOpenedNPV
+// was false (a Queue/Connect click, not an authorized NPV open), and the
+// guard immediately closed the panel before Queue/Connect's real content
+// ever finished rendering - which is why they appeared not to open at all
+// until NPV had been opened once first. npvGuardObserver now debounces
+// ~150ms after the last mutation before evaluating isNpvOpen(), letting the
+// aria-label swap settle before judging. updateNpvLayoutState() still runs
+// immediately on every mutation (unchanged), only the close-decision is
+// debounced.
+
 // --- Per-site visual premium spoof toggles ---
 // Declared at module scope (not inside either IIFE below) because both the
 // text/badge-spoof IIFE and the separate ad-slot-removal IIFE need to read
@@ -768,11 +785,31 @@ if (HOST_IS_OPEN) {
     // native album art click (setupNpvWidgetTrigger). Anything else that makes the
     // panel visible gets auto-closed, since userOpenedNPV only ever becomes true via
     // one of those two paths.
+    //
+    // v6.10 fix (ported from Spotifuck): the guard fires on every DOM mutation
+    // anywhere in document.body (Spotify's app mutates constantly). Clicking Queue's
+    // or Connect's own native button flips aria-hidden to false on the shared dock
+    // immediately, but the content swap - the <aside>'s aria-label changing from
+    // "Now playing view" to "Queue"/"Connect to a device" - lands slightly after. In
+    // that window isNpvOpen() read the still-stale "Now playing view" label,
+    // userOpenedNPV was false (this was a Queue/Connect click, not an authorized NPV
+    // open), and the guard immediately closed the panel before Queue/Connect's real
+    // content finished rendering - which is why Queue/Connect appeared not to open at
+    // all until NPV had been opened once first. Debouncing ~150ms after the last
+    // mutation before evaluating isNpvOpen() lets Spotify's own aria-label swap settle
+    // before judging. updateNpvLayoutState() still runs immediately on every mutation
+    // (unchanged) since that's just a CSS class toggle and doesn't need debouncing.
+    let npvGuardDebounce = null;
     const npvGuardObserver = new MutationObserver(() => {
-        if (isNpvOpen() && !userOpenedNPV) {
-            window.closeNowPlay('npv-guard-autoclose');
-        }
         updateNpvLayoutState();
+        if (npvGuardDebounce) clearTimeout(npvGuardDebounce);
+        npvGuardDebounce = setTimeout(() => {
+            npvGuardDebounce = null;
+            if (isNpvOpen() && !userOpenedNPV) {
+                window.closeNowPlay('npv-guard-autoclose');
+            }
+            updateNpvLayoutState();
+        }, 150);
     });
     npvGuardObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-hidden'] });
 
