@@ -85,6 +85,32 @@
 // Scoped it behind `html:not(.npv-open)` (unlike spotifuck's unconditional
 // version) so it doesn't squash NPV's own panel while legitimately open.
 
+// Sixth big change:
+// Fixed setupNpvWidgetTrigger (the player-bar album art click listener):
+// it unconditionally set userOpenedNPV=true on every click, but the album
+// art is a native TOGGLE - the second click closes NPV, and that close
+// never runs through closeNowPlay() (the only other place that resets the
+// flag), so userOpenedNPV was left stuck true after closing via album art.
+// The next unrelated native NPV open (e.g. a playlist's play button
+// auto-opening NPV) was then wrongly trusted as authorized and never
+// auto-closed by the guard. Now computes willOpen from isNpvOpen() before
+// the click, same as clickNP() already did, and sets the flag to match
+// either direction.
+// Ported Spotifuck's SPFDBG debug-logging system (dbg(event, selector,
+// details), off by default, toggled via its own userscript-manager menu
+// command) into every click handler and NPV-guard state-change function:
+// the two spoofed premium buttons, the Edit profile/Payment method banner
+// buttons, the payments-page blocker, closeNowPlay(), clickNP(),
+// npvGuardObserver's autoclose branch, setupNpvButton, and the album-art
+// listener above. Declared at module scope (outside both IIFEs and the NPV
+// guard block) so all three sections can log through it.
+// Investigated the Queue/Connect panel's close (X) button being scrolled
+// out of the visible viewport (present in the DOM, just off-screen) -
+// attempted porting Spotifuck's #main-view height-clipping CSS
+// (min-height:0 + overflow:hidden, without Spotifuck's bottom-nav/player
+// height subtraction, which doesn't apply here) but this did NOT fix it in
+// testing. Reverted; root cause still open.
+
 // --- Per-site visual premium spoof toggles ---
 // Declared at module scope (not inside either IIFE below) because both the
 // text/badge-spoof IIFE and the separate ad-slot-removal IIFE need to read
@@ -120,6 +146,33 @@ if (typeof GM_registerMenuCommand === 'function') {
         () => { setFlag(SPOOF_WWW_KEY, !getFlag(SPOOF_WWW_KEY)); location.reload(); }
     );
 }
+
+// --- Debug logging (ported from Spotifuck) ---
+// Off by default; console.log spam would otherwise fire on every click for
+// every ordinary user. Declared at module scope (not inside either IIFE
+// below, and not inside the NPV guard block) since all three sections need
+// it. Every click handler / state-change function logs through dbg() with
+// the same shape: dbg('event name', 'selector used to find the element',
+// { ...state/details }). Filter your console by "SPFDBG" to isolate just
+// this script's activity.
+const DEBUG_KEY = 'spotiweb_debugLog';
+function debugLoggingEnabled() {
+    try { return typeof GM_getValue === 'function' ? GM_getValue(DEBUG_KEY, false) : false; }
+    catch (e) { return false; }
+}
+function dbg(event, selector, details) {
+    if (!debugLoggingEnabled()) return;
+    console.log(`%c[SPFDBG] ${event}`, 'color:#1ed760;font-weight:bold;', 'selector:', selector, details || '');
+}
+
+if (typeof GM_registerMenuCommand === 'function') {
+    GM_registerMenuCommand(
+        (debugLoggingEnabled() ? '✅' : '❌') + ' Debug Logging (console)',
+        () => { setFlag(DEBUG_KEY, !debugLoggingEnabled()); location.reload(); }
+    );
+}
+
+console.log('%c[SPFDBG] filter this console by "SPFDBG" to see every button click, selector, and resulting view change', 'color:#1ed760;font-weight:bold;');
 
 (function() {
     'use strict';
@@ -450,13 +503,19 @@ if (typeof GM_registerMenuCommand === 'function') {
                 logChange('a, button, [role="button"]', orig, 'DONT JOIN PREMIUM');
                 el.textContent = 'DONT JOIN PREMIUM';
                 el.style.cssText += `background:${PINK}!important;color:#000!important;border:none!important;border-radius:20px!important;font-weight:700!important;pointer-events:none!important;cursor:default!important;`;
-                el.onclick = e => { e.preventDefault(); e.stopPropagation(); };
+                el.onclick = e => {
+                    dbg('spoofed "DONT JOIN PREMIUM" button: clicked', 'a, button, [role="button"] (originally Get/Buy/Join Premium)', { action: 'preventDefault + stopPropagation (click is a no-op)' });
+                    e.preventDefault(); e.stopPropagation();
+                };
             }
             if (/^(explore|view)\s*plans/.test(t)) {
                 logChange('a, button, [role="button"]', orig, 'Manage plan');
                 el.textContent = 'Manage plan';
                 el.style.cssText += `background:transparent!important;color:#fff!important;border:1px solid #727272!important;border-radius:20px!important;font-weight:700!important;pointer-events:none!important;cursor:default!important;`;
-                el.onclick = e => { e.preventDefault(); e.stopPropagation(); };
+                el.onclick = e => {
+                    dbg('spoofed "Manage plan" button: clicked', 'a, button, [role="button"] (originally Explore/View plans)', { action: 'preventDefault + stopPropagation (click is a no-op)' });
+                    e.preventDefault(); e.stopPropagation();
+                };
             }
             if (/^try/.test(t) && !el.dataset.spDone) {
                 logChange('a, button, [role="button"]', orig, '(hidden)');
@@ -561,6 +620,9 @@ if (typeof GM_registerMenuCommand === 'function') {
             left.appendChild(leftText);
             left.onclick = e => {
                 e.stopPropagation();
+                dbg('premiumBanner left (Edit profile): clicked', '.__sp custom div (replaces [data-testid="compact-banner"])', {
+                    action: 'redirecting to https://www.spotify.com/us/account/profile/'
+                });
                 window.location.href = 'https://www.spotify.com/us/account/profile/';
             };
 
@@ -581,6 +643,9 @@ if (typeof GM_registerMenuCommand === 'function') {
             right.appendChild(rightText);
             right.onclick = e => {
                 e.stopPropagation();
+                dbg('premiumBanner right (Payment method): clicked', '.__sp custom div (replaces [data-testid="compact-banner"])', {
+                    action: 'redirecting to https://www.spotify.com/us/account/saved-payment-cards/'
+                });
                 window.location.href = 'https://www.spotify.com/us/account/saved-payment-cards/';
             };
 
@@ -618,7 +683,12 @@ if (typeof GM_registerMenuCommand === 'function') {
             main.innerHTML = '';
             main.appendChild(wrapper);
             document.querySelectorAll('form, button[type="submit"], [data-testid*="pay"], [data-testid*="checkout"]').forEach(el => {
-                el.onclick = e => { e.preventDefault(); e.stopPropagation(); };
+                el.onclick = e => {
+                    dbg('payments page blocker: clicked', 'form, button[type="submit"], [data-testid*="pay"], [data-testid*="checkout"]', {
+                        'element tag': el.tagName, action: 'preventDefault + stopPropagation (click is a no-op)'
+                    });
+                    e.preventDefault(); e.stopPropagation();
+                };
             });
         }
     }
@@ -748,13 +818,24 @@ if (HOST_IS_OPEN) {
     }
 
     window.closeNowPlay = function(source = 'unknown') {
-        userOpenedNPV = false;
+        userOpenedNPV = false; // NPV guard: any close (any source) disarms the "user opened it" flag
         const panelContainer = document.querySelector('#Desktop_PanelContainer_Id');
-        if (!panelContainer) return;
+        if (!panelContainer) {
+            dbg('closeNowPlay: no-op - #Desktop_PanelContainer_Id not found', '#Desktop_PanelContainer_Id', { source });
+            return;
+        }
         const ariaHidden = panelContainer.parentNode.parentNode.ariaHidden;
         if (ariaHidden === 'false') {
             const toggleBtn = panelContainer.parentNode.parentNode.nextElementSibling?.querySelector('button');
+            dbg('closeNowPlay: view manipulated', '#Desktop_PanelContainer_Id parent parent nextElementSibling button', {
+                source,
+                'panel ariaHidden (before)': ariaHidden,
+                action: toggleBtn ? 'clicked the toggle button to close the panel' : 'toggle button NOT FOUND - could not close',
+                'toggleBtn aria-label': toggleBtn ? toggleBtn.getAttribute('aria-label') : null
+            });
             if (toggleBtn) toggleBtn.click();
+        } else {
+            dbg('closeNowPlay: no-op - panel already hidden', '#Desktop_PanelContainer_Id', { source, ariaHidden });
         }
     };
 
@@ -772,11 +853,15 @@ if (HOST_IS_OPEN) {
     function clickNP(source = 'npBtn-click') {
         const panelContainer = document.querySelector('#Desktop_PanelContainer_Id');
         const toggleBtn = panelContainer?.parentNode.parentNode.nextElementSibling?.querySelector('button');
-        if (!toggleBtn) return;
+        if (!toggleBtn) {
+            dbg('clickNP: no-op - toggle button not found', '#Desktop_PanelContainer_Id parent parent nextElementSibling button', { source });
+            return;
+        }
         const willOpen = !isNpvOpen();
         userOpenedNPV = willOpen; // set BEFORE the click - npvGuardObserver's mutation
         // microtask fires before a setTimeout(0) macrotask would, so this has to be set
         // first or the guard sees the open with the flag still false and undoes it.
+        dbg('clickNP: clicking toggle', '#Desktop_PanelContainer_Id parent parent nextElementSibling button', { source, willOpen });
         toggleBtn.click();
     }
 
@@ -786,6 +871,10 @@ if (HOST_IS_OPEN) {
     // one of those two paths.
     const npvGuardObserver = new MutationObserver(() => {
         if (isNpvOpen() && !userOpenedNPV && !otherPanelOpening) {
+            const panelContainer = document.querySelector('#Desktop_PanelContainer_Id');
+            dbg('NPV guard: panel opened without npBtn click - closing', '#Desktop_PanelContainer_Id', {
+                'panelContainer aria-label': panelContainer?.getAttribute('aria-label') ?? null
+            });
             window.closeNowPlay('npv-guard-autoclose');
         }
         updateNpvLayoutState();
@@ -821,6 +910,8 @@ if (HOST_IS_OPEN) {
         // Make sure NPV starts closed - at this point only npBtn is wired as an
         // authorized opener (setupNpvWidgetTrigger runs separately).
         if (isNpvOpen() && !userOpenedNPV) window.closeNowPlay('npv-guard-init');
+
+        dbg('setupNpvButton: button inserted', 'button[data-testid="lyrics-button"]', {});
     };
 
     // The player-bar album art (div[data-testid=now-playing-widget]>div:first-child)
@@ -838,7 +929,17 @@ if (HOST_IS_OPEN) {
         const artEl = document.querySelector('div[data-testid="now-playing-widget"]>div:first-child:not(.fuckd-npv-art)');
         if (!artEl) return;
         artEl.classList.add('fuckd-npv-art');
-        artEl.addEventListener('click', () => { userOpenedNPV = !isNpvOpen(); }, { capture: true });
+        artEl.addEventListener('click', () => {
+            const willOpen = !isNpvOpen();
+            userOpenedNPV = willOpen;
+            dbg('npvWidget: album art clicked', 'div[data-testid="now-playing-widget"]>div:first-child', {
+                willOpen,
+                note: willOpen
+                    ? 'userOpenedNPV set true before Spotify\'s own click handling runs, so npvGuardObserver allows this open'
+                    : 'panel was open - this click closes it natively (closeNowPlay() never runs for this path), so userOpenedNPV reset to false here to keep guard state in sync'
+            });
+        }, { capture: true });
+        dbg('setupNpvWidgetTrigger: listener attached', 'div[data-testid="now-playing-widget"]>div:first-child', {});
     };
 
     // Same authorized-opener trick as setupNpvWidgetTrigger above, but for Queue and
@@ -850,12 +951,18 @@ if (HOST_IS_OPEN) {
         const queueBtn = document.querySelector('button[data-testid="control-button-queue"]:not(.fuckd-other-panel)');
         if (queueBtn) {
             queueBtn.classList.add('fuckd-other-panel');
-            queueBtn.addEventListener('click', () => { markOtherPanelOpening(); }, { capture: true });
+            queueBtn.addEventListener('click', () => {
+                markOtherPanelOpening();
+                dbg('otherPanel: Queue button clicked', 'button[data-testid="control-button-queue"]', {});
+            }, { capture: true });
         }
         const connectBtn = document.querySelector('button[aria-label="Connect to a device"]:not(.fuckd-other-panel)');
         if (connectBtn) {
             connectBtn.classList.add('fuckd-other-panel');
-            connectBtn.addEventListener('click', () => { markOtherPanelOpening(); }, { capture: true });
+            connectBtn.addEventListener('click', () => {
+                markOtherPanelOpening();
+                dbg('otherPanel: Connect button clicked', 'button[aria-label="Connect to a device"]', {});
+            }, { capture: true });
         }
     };
 
