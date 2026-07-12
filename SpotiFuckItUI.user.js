@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Spotifuck 7.1
+// @name         Spotifuck Log 6.8.2 - i thin library view fixed
 // @namespace    https://github.com/Myst1cX/spotifuck-userscript
-// @version      6.7
-// @description  Full Spotifuck 1.6.4 UI hack (with minor tweaks) + playback control + force English UI + visual premium spoof + bottom nav bar
+// @version      6.8.1.log.do.not.install.
+// @description  Full Spotifuck 1.6.4 UI hack (with minor tweaks) + playback control + force English UI + visual premium spoof
 // @author       Myst1cX (adapted from Spotifuck app)
 // @match        *://open.spotify.com/*
 // @match        https://www.spotify.com/*/account/*
@@ -18,8 +18,8 @@
 // @run-at       document-start
 // @homepageURL  https://github.com/Myst1cX/spotifuck-userscript
 // @supportURL   https://github.com/Myst1cX/spotifuck-userscript/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-v6.user.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-v6.user.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifucklog.user.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifucklog.user.js
 // ==/UserScript==
 
 /*
@@ -101,30 +101,156 @@
  *   HOW DOES IT WORK: Text nodes are taken over by overlays that affirm you do not need Premium.
  *   Each toggle is independent, persists via GM storage, and reloads the page to apply. Both toggles are enabled by default.
 
- * Newly added (v6.7) - Bottom nav bar (ported from SpotiKit 7.3.2.fork):
- * - Added a fixed Home/Search/Library bottom nav bar (#sp-bottom-nav), taking the place of
- *   Spotifuck's old always-docked library button as the primary way to reach Home, Search and
- *   the Library. Home/Search tabs push / and /search via history.pushState.
- * - The now-playing-bar (player) is repositioned to sit directly above the new bottom nav
- *   (bottom:56px instead of normal flow) - everything else about the player (AMOLED colors,
- *   control layout/scaling) is untouched, still 100% Spotifuck's own styling.
- * - .Root__main-view/#main-view is turned into a clipped flex column (height: 100dvh minus the
- *   bottom nav's 56px minus the player's live-measured height, tracked via a ResizeObserver into
- *   --sp-np-bar-height, same technique SpotiKit uses) so the scrollable content area now actually
- *   stops above the player+nav instead of scrolling on behind them.
- * - Library opening no longer uses Spotifuck's original always-visible-collapsed-to-48x48/
- *   expand-to-fixed-fullscreen switchLs(). It's replaced with SpotiKit's overlay-based switchLs():
- *   the sidebar is display:none by default (only reachable via the new bottom nav's Library tab
- *   or the in-sidebar header button once opened) and expands via a [data-overlay="true"] attribute
- *   to a full 100vw/100vh overlay, tracked with sidebarOverlayActive + sessionStorage so it
- *   survives SPA navigation the same way SpotiKit's does. The only thing kept from Spotifuck's
- *   original switchLs() is the injected header label text ("✖  Close Library") instead of
- *   SpotiKit's "← Library".
- * - Removed the old "collapse library on startup if it's expanded" behavior (used to click the
- *   library button once on load to force Spotifuck's docked-48x48 collapsed state) - that initial
- *   state doesn't exist anymore now that the sidebar is display:none by default until opened via
- *   the bottom nav.
+ * Newly added (v6.7):
+ * - Fixed AutoCloseLib (what happens when you click a playlist while the library is open,
+ *   which is supposed to auto-close the library and take you to the playlist) leaving a
+ *   glitched, overlapping cluster of icons in the header instead of cleanly closing.
+ *
+ *   Plain-language: closing the library used to be done by just shrinking its box down to
+ *   48x48 pixels with CSS, without ever telling Spotify's own page that the library was
+ *   actually closed. So Spotify kept drawing the full "library is open" screen (all its
+ *   buttons, the search bar, the whole playlist list) and it all got squashed into that
+ *   tiny box - that's the glitch. The fix is to do a real click on Spotify's own
+ *   open/close button instead, so Spotify closes it properly itself.
+ *
+ *   Dev: switchLs(true, ...) (the forceCollapse branch) only ever set inline CSS
+ *   (position/width/height fixed to 48x48) on #Desktop_LeftSidebar_Id - it never
+ *   triggered Spotify's own React re-render into collapsed markup, so the fully expanded
+ *   header/grid stayed mounted and got clipped into the 48x48 box.
+ *   Fix: grid-autoclose (the code that runs 150ms after you click a playlist, so
+ *   Spotify's own navigation has time to start first) now calls .click() on Spotify's own
+ *   library toggle button directly, then resets our own tracked state (dataset.fuckExpanded)
+ *   and clears any leftover inline styles from our fullscreen-overlay EXPAND branch, instead
+ *   of forcing the 48x48 CSS itself. Tested and confirmed this does not break folder-depth
+ *   navigation (a stale comment on the old code claimed a real click would - it doesn't;
+ *   collapsing from inside a folder and reopening returns to the same folder correctly).
+ *   No custom button injection needed either - Spotify's real collapsed header already has
+ *   a working, correctly-labeled toggle button in that spot.
+ *
+ * - Second bug found during testing of the above fix: the .click() we just added also
+ *   fired OUR OWN existing click listener on that same button (the one that normally
+ *   handles manual clicks), which unconditionally re-opened the fullscreen overlay a
+ *   moment later - right on top of the library Spotify had just properly closed. Result:
+ *   a black screen showing only playlist artwork, with everything else stuck hidden
+ *   underneath our own overlay.
+ *   Fix: a one-shot flag (suppressLibBtnHandler) is set immediately before this specific
+ *   synthetic click and read (then cleared) by our click listener, so only that one
+ *   synthetic click skips our own re-open logic. Spotify's native handling of the click,
+ *   and every real click from the user, are completely unaffected.
+ *
+ * - Third bug found during a second round of testing: after the two fixes above, manually
+ *   clicking the library toggle to close it (not the auto-close case, just an ordinary
+ *   click) stopped working entirely - the library no longer collapsed at all.
+ *   Cause: this was a mistake in the first version of this fix. switchLs()'s COLLAPSE
+ *   branch (the "else" side of the expand/collapse toggle) is not only reached by the old,
+ *   now-removed 48x48-forcing behavior - it is also the exact same branch every ordinary
+ *   manual collapse click runs through. Commenting that branch out to remove the old
+ *   48x48 code broke manual collapsing entirely, since nothing else in that branch was
+ *   replaced.
+ *   Fix: the COLLAPSE branch now does what grid-autoclose does - lets Spotify's own click
+ *   handling collapse the real layout (this already happens automatically for a manual
+ *   click, since it's a real click to begin with), and simply clears the inline styles our
+ *   own EXPAND branch had set (position/width/height/left/top/zIndex), so Spotify's real
+ *   collapsed layout can show through cleanly instead of our old fullscreen overlay hiding
+ *   it. The old 48x48-forcing code and the now-always-false forceCollapse parameter it
+ *   depended on have been removed entirely (not just commented out) - it's fully replaced
+ *   by the click-based approach above, so keeping it around as dead code served no purpose.
+ *
+ * Newly added (v6.8):
+ * - Added a fixed Home/Search/Library bottom nav bar (#sp-bottom-nav), ported from
+ *   kitbodega/SpotiKit's 7.3.2.fork mobile layout. Home/Search tabs navigate via
+ *   history.pushState; the Library tab does a real .click() on Spotify's own native
+ *   toggle button (Trigger 1, unchanged from v6.7) rather than calling switchLs()
+ *   directly, so it goes through the exact same debounced path a manual click does.
+ * - The now-playing player is repositioned to fixed/bottom:56px (directly above the
+ *   new bottom nav) - AMOLED colors and control layout/scaling are untouched, still
+ *   100% this script's own styling. #main-view is clipped into a flex column (100dvh
+ *   minus the bottom nav's 56px minus the player's live-measured height, tracked via
+ *   a ResizeObserver into --sp-np-bar-height) so the scrollable content area stops
+ *   above the player+nav instead of scrolling on behind them.
+ * - #Desktop_LeftSidebar_Id is now display:none by default (no more always-visible
+ *   native narrow rail) and only appears - as the exact same fullscreen overlay
+ *   switchLs() already built in v6.7 - once dataset.fuckExpanded is 'true'. switchLs()
+ *   itself is untouched; this is purely a CSS visibility gate layered on top of it.
+ * - A one-time silent "prewarm" pass (ported from SpotiKit) does a fully invisible
+ *   expand/settle/collapse cycle on load, since the library's virtualized list
+ *   measures its container on mount and a display:none container measures as
+ *   zero-size - without this, the first real open could render broken until toggled.
+ * - Library-open state now persists across in-page SPA navigation (sessionStorage +
+ *   a history.pushState/replaceState hook), cleared on every fresh page load so it
+ *   never fights v6.7's startup-collapse. Tapping Home/Search while the library is
+ *   open auto-closes it first, via the same real-click mechanism as Trigger 1/2.
+ * - Ported SpotiKit's body-class-driven header visibility: #global-nav-bar (home
+ *   icon, bell, upgrade button, profile menu) and the native search input are hidden
+ *   by default and only shown when body carries the new "sp-search" class (i.e. the
+ *   bottom nav's Search tab is active), since Home/Search now live in the bottom nav.
+ *
+ * Newly added (v6.8.1) - two fixes:
+ * a) Header still showed a native Home icon inside #global-nav-bar while the Search
+ *    tab was active, duplicating the bottom nav's own Home tab. SpotiKit's original
+ *    also strips that specific button back out even while the rest of the bar is
+ *    shown for search - that follow-up rule wasn't ported in v6.8, only the bar-level
+ *    show/hide was. Added it back.
+ * b) Library bug: ensureLibButtonWired (v6.8, bottom nav) duplicated the exact same
+ *    "find + wire the native Your Library toggle" logic already in setupLibraryButton
+ *    (v6.7, addCSSJSHack) as a second, independent copy with its own local guard.
+ *    Since the sidebar is display:none whenever collapsed, the bottom nav is the only
+ *    way to reach Library, so ensureLibButtonWired's copy always ran - and depending
+ *    on timing relative to setupLibraryButton's own passes, both copies could each
+ *    end up attaching their own click listener to the same button. One physical click
+ *    then scheduled switchLs() twice back-to-back (expand, immediately collapsed
+ *    right back by the second call) - library flashed open for a frame then got stuck
+ *    closed. Fix: both now delegate to one shared wireLibraryButton() function, so
+ *    there is only ever one guard and only ever one listener, however either of them
+ *    gets called.
+ *
+ * Newly added (v6.8.2) - Issue 1 fix:
+ * - onLocationChange's library-open persistence restore (v6.8) used to write
+ *   dataset.fuckExpanded='true' plus the fullscreen CSS and header text
+ *   directly, bypassing switchLs() entirely. switchLs() (v6.7) relies on
+ *   being the *only* code that ever writes dataset.fuckExpanded ("we're the
+ *   only code that ever calls switchLs(), so this can never desync") -
+ *   onLocationChange's direct write broke that invariant, since it never
+ *   touched Spotify's own native toggle. That could leave our tracked state
+ *   saying "expanded" (or, after a later reset, "collapsed") while the
+ *   native button/layout disagreed, so the next real click branched off the
+ *   wrong state inside switchLs() and a second call was needed to
+ *   self-correct - a visible flash/flicker on the first click after an
+ *   in-app navigation.
+ *   Fix: added expandLibraryViaRealClick(), mirroring the existing
+ *   collapseLibraryViaRealClick() - it performs a real click on the native
+ *   toggle (same mechanism as Trigger 1/2), which runs through the one
+ *   wireLibraryButton() listener and switchLs() itself. onLocationChange now
+ *   calls this instead of writing state directly, restoring switchLs() as
+ *   the single source of truth for dataset.fuckExpanded.
+ *
+ * Newly added (v6.8.3) - Issue 1, actual root cause:
+ * - v6.8.2's fix helped but didn't fully explain the bug: testing showed a
+ *   single click on the library toggle firing our own 'libBtn: clicked' log
+ *   TWICE, permanently, starting right after the first grid-autoclose
+ *   (clicking a playlist while the library was open) + reopen sequence -
+ *   every click after that point double-fired, expanding then immediately
+ *   collapsing back (a visible flash, library never actually stayed open).
+ * - Cause: wireLibraryButton()'s guard checked libBtn.classList.contains
+ *   ('fuckd'). ensureLibButtonWired() re-queries this same button every time
+ *   the bottom nav's Library tab is tapped, and Spotify's own re-render of
+ *   the button (switching its icon/aria-label between Open<->Collapse)
+ *   recomputes and overwrites its class attribute - wiping our 'fuckd'/
+ *   'lbtn' classes, but NOT the click listener already attached (listeners
+ *   aren't tied to attributes). The next tap then saw no '.fuckd', believed
+ *   the button unwired, and attached a *second* listener to the very same
+ *   node - both fire on every click from then on, forever, since neither
+ *   listener is ever removed.
+ *   Fix: wireLibraryButton()'s guard now uses a plain JS property
+ *   (__spLibBtnWired) set directly on the element instead of the DOM class.
+ *   Spotify's re-renders only touch attributes/props it actually manages
+ *   (class, aria-label, etc.) - a property we invented ourselves is
+ *   invisible to it and can never get wiped out from under us. The
+ *   'fuckd'/'lbtn' classes are still added (kept for the general "already
+ *   processed" convention and the inline padding/height styling), just no
+ *   longer relied on as the guard.
  */
+
 
 (function() {
     'use strict';
@@ -135,6 +261,31 @@
     let ulFlag = false;  // Unlock flag
     let ffDone = false;  // First fuck done (firstFuck initialization complete)
     let pfint = null;    // Primary features interval
+    let pendingLibCollapse = null;  // Timeout id for the delayed auto-collapse-on-navigate
+    let suppressLibBtnHandler = false;  // v6.7: set true right before a synthetic click on the
+    // native library toggle (grid-autoclose), so our own libBtn 'click' listener (which fires
+    // on that same synthetic click) skips scheduling switchLs() for it. Consumed (reset to
+    // false) on read, so it only ever suppresses the one synthetic click, never a real one.
+
+    // --- Bottom nav / library-overlay-persistence state (v6.8) ---
+    const LIB_OPEN_KEY = 'spf_library_open';  // sessionStorage key, cleared on every fresh page load (see init)
+    let lastActiveTab = null;
+    let lastBodyClass = '';
+    let lastNavPath = '';
+    let bottomNavEl = null;
+    let npBarResizeObserver = null;
+
+    // --- Debug logging (v6.7) ---
+    // Every click handler in this script logs through dbg() with the same shape:
+    //   dbg('event name', 'selector used to find the element', { ...state/details })
+    // For handlers that open/alter a view (switchLs, closeNowPlay), the function
+    // itself logs a second line showing exactly what changed (dataset/style
+    // before -> after), so you can see both "what was clicked" and "what the
+    // script then did to the view" in sequence.
+    // Filter your console by "SPFDBG" to isolate just this script's click activity.
+    function dbg(event, selector, details) {
+        console.log(`%c[SPFDBG] ${event}`, 'color:#1ed760;font-weight:bold;', 'selector:', selector, details || '');
+    }
 
     // --- Per-site visual premium spoof toggles (v6.6) ---
     const SPOOF_OPEN_KEY = 'spotifuck_premSpoofOpen';
@@ -426,164 +577,158 @@
     // Note: Class name ".fuckd" used throughout is from original APK source (r0/e.java)
     // It marks elements as "already processed" to prevent duplicate event handlers
 
-    // --- Bottom-nav-driven library overlay state (ported from SpotiKit 7.3.2.fork) ---
-    // Replaces the old always-docked-collapsed-to-48x48/expand-to-fixed-fullscreen
-    // switchLs(). The sidebar now lives display:none by default (see injectCSS's
-    // #Desktop_LeftSidebar_Id rule) and only appears as a full-viewport overlay,
-    // toggled by the new #sp-bottom-nav Library tab (see createBottomNav below).
-    let sidebarOverlayActive = false;
-    let originalHeaderText = null;
-    const layoutCache = {
-        leftSidebar: null,
-        rootContainer: null,
-        bottomNav: null
-    };
-
-    function getLeftSidebar() {
-        if (!layoutCache.leftSidebar || !document.contains(layoutCache.leftSidebar)) {
-            layoutCache.leftSidebar = document.querySelector('#Desktop_LeftSidebar_Id');
+    /**
+     * switchLs - Toggle library sidebar between expanded (fullscreen overlay) and collapsed
+     * (Spotify's own native narrow layout) states.
+     * From r0/e.java line 202: window.switchLs=function(){...}
+     *
+     * Plain-language: this is the function that opens or closes the big "Your Library"
+     * screen. It looks at whether the library is currently open (tracked on the sidebar
+     * element itself, see isExpanded below) and does the opposite.
+     *
+     * @param {string} source - debug-only: which caller invoked this (see dbg() calls at each call site)
+     */
+    window.switchLs = function(source = 'unknown') {
+        // Cancel a still-pending delayed auto-collapse (see setupLibraryGrid below).
+        // Without this, quickly reopening the library after clicking a playlist
+        // could get immediately re-collapsed by that stale queued timeout firing
+        // after this call - the "glitches even more" symptom.
+        if (pendingLibCollapse !== null) {
+            clearTimeout(pendingLibCollapse);
+            pendingLibCollapse = null;
+            dbg('switchLs: cancelled pending auto-collapse', '#Desktop_LeftSidebar_Id', { source });
         }
-        return layoutCache.leftSidebar;
-    }
 
-    function getRootContainer() {
-        if (!layoutCache.rootContainer || !document.contains(layoutCache.rootContainer)) {
-            layoutCache.rootContainer = document.querySelector('.Root__top-container') || document.querySelector('div[data-testid=root]');
-        }
-        return layoutCache.rootContainer;
-    }
-
-    // --- Silent one-time library prewarm ---
-    // The sidebar's virtualized list/grid measures its container on mount, but
-    // it's sitting at display:none up to that point (see the #Desktop_LeftSidebar_Id
-    // CSS rule) - so its actual first real expand always measured a stale
-    // zero-size box and rendered broken, only fixing itself once toggled again.
-    // Rather than let the user see that broken-then-fixed flash on their first
-    // click, this runs the exact same expand/settle/collapse cycle once, fully
-    // invisibly (visibility:hidden + pointer-events:none via the .sp-prewarm
-    // class, layered on the real [data-overlay="true"] styling so it's laid out
-    // identically to a genuine open), before the user ever touches the Library
-    // tab. By the time they do click it for real, the container's already been
-    // through one real layout pass and renders correctly right away.
-    let libraryPrewarmed = false;
-    let libraryPrewarmAttempts = 0;
-    function prewarmLibrarySidebar() {
-        if (libraryPrewarmed) return;
-        const leftSidebar = getLeftSidebar();
+        const leftSidebar = document.querySelector('#Desktop_LeftSidebar_Id');
         if (!leftSidebar) {
-            libraryPrewarmAttempts++;
-            if (libraryPrewarmAttempts < 100) setTimeout(prewarmLibrarySidebar, 100);
+            dbg('switchLs: ABORTED - #Desktop_LeftSidebar_Id not found', '#Desktop_LeftSidebar_Id', { source });
             return;
         }
-        libraryPrewarmed = true;
 
-        leftSidebar.classList.add('sp-prewarm');
-        leftSidebar.dataset.overlay = 'true';
+        const navFirstChild = leftSidebar.querySelector('nav>div>div:first-child');
+        if (!navFirstChild) {
+            dbg('switchLs: ABORTED - nav>div>div:first-child not found', 'nav>div>div:first-child', { source });
+            return;
+        }
 
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                const list = leftSidebar.querySelector('[role="list"],[role="grid"],div[class*="view-container"]');
-                if (list) {
-                    list.scrollBy(0, 1);
-                    list.scrollBy(0, -1);
-                }
-                window.dispatchEvent(new Event('resize'));
+        // NOTE: We used to infer state from `navFirstChild.classList.length === 2`
+        // (ported from the APK's DOM). On the desktop web player, Spotify's own
+        // re-renders change how many classes this wrapper has independent of
+        // whether the library is actually expanded/collapsed, which caused the
+        // toggle to occasionally flip the wrong way (icon/header desyncing from
+        // the real panel size - rapid Expanded/Collapsed flicker).
+        // Instead, track our own state on the sidebar element - we're the only
+        // code that ever calls switchLs(), so this can never desync.
+        const isExpanded = leftSidebar.dataset.fuckExpanded === 'true';
+        const libBtnNow = document.querySelector('#Desktop_LeftSidebar_Id header button[aria-label*="Your Library"]');
 
-                setTimeout(() => {
-                    delete leftSidebar.dataset.overlay;
-                    leftSidebar.classList.remove('sp-prewarm');
-                    window.dispatchEvent(new Event('resize'));
-                    console.log('#Library: pre-warmed silently - first real open should render correctly now');
-                }, 60);
-            });
+        dbg('switchLs: called', '#Desktop_LeftSidebar_Id', {
+            source,
+            'dataset.fuckExpanded (before)': leftSidebar.dataset.fuckExpanded ?? '(unset)',
+            'computed isExpanded': isExpanded,
+            'real libBtn aria-label right now': libBtnNow ? libBtnNow.getAttribute('aria-label') : '(libBtn not found)',
+            willTakeBranch: isExpanded ? 'COLLAPSE' : 'EXPAND'
         });
-    }
 
-    /**
-     * switchLs - Toggle the library sidebar between hidden and a full-screen overlay.
-     * Opening/closing mechanics ported from SpotiKit's switchLs (data-overlay attribute
-     * + CSS overlay + sessionStorage persistence across SPA navigation); the injected
-     * header label text is kept as Spotifuck's original "✖  Close Library".
-     * @param {boolean} forceCollapse - If true, force-close regardless of current state
-     */
-    window.switchLs = function(forceCollapse = false) {
-        const leftSidebar = getLeftSidebar();
-        if (!leftSidebar) return;
-
-        const rootContainer = getRootContainer();
-
-        if (forceCollapse || sidebarOverlayActive) {
-            console.log('#Library: Collapsed');
-            delete leftSidebar.dataset.overlay;
-            sidebarOverlayActive = false;
-            sessionStorage.removeItem('sp_library_open');
-            if (rootContainer) {
-                rootContainer.style.removeProperty('--left-sidebar-width');
-                rootContainer.style.removeProperty('--nav-bar-width');
-            }
-            const headerH1 = leftSidebar.querySelector('header>div>div:first-child h1');
-            if (headerH1 && originalHeaderText !== null) {
-                headerH1.textContent = originalHeaderText;
-            }
-            window.dispatchEvent(new Event('resize'));
-        } else {
+        if (!isExpanded) {
+            // Expand to full-screen overlay
             console.log('#Library: Expanded');
-            leftSidebar.dataset.overlay = 'true';
-            sidebarOverlayActive = true;
-            sessionStorage.setItem('sp_library_open', 'true');
-
-            if (rootContainer) {
-                rootContainer.style.setProperty('--left-sidebar-width', window.innerWidth + 'px');
-                rootContainer.style.setProperty('--nav-bar-width', window.innerWidth + 'px');
-            }
+            leftSidebar.dataset.fuckExpanded = 'true';
+            leftSidebar.style.position = 'fixed';
+            leftSidebar.style.width = '100%';
+            leftSidebar.style.height = '100%';
+            leftSidebar.style.left = '0';
+            leftSidebar.style.top = '0';
+            leftSidebar.style.zIndex = '20';
 
             const headerH1 = leftSidebar.querySelector('header>div>div:first-child h1');
             if (headerH1) {
-                if (originalHeaderText === null) {
-                    originalHeaderText = headerH1.textContent;
-                }
+                const prevText = headerH1.textContent;
                 // Using textContent for security, then manually adding close icon
                 headerH1.textContent = '✖ \u00A0 Close Library';
-            }
-
-            const list = leftSidebar.querySelector('[role="list"],[role="grid"],div[class*="view-container"]');
-            // The dataset.overlay flip above only just changed this container from
-            // display:none to visible - the browser hasn't committed a layout pass
-            // for it yet at this point in the same synchronous tick. Spotify's own
-            // virtualized library list/grid measures its container on mount, so
-            // firing the resize event + scrollBy nudge immediately here has it
-            // measure a still-stale (zero-size) box, producing a broken first
-            // render that only fixes itself the next time it's toggled. Deferring
-            // both to after two animation frames (one for the display change to
-            // actually paint, one more margin for the measurement to settle)
-            // gives it a real, already-laid-out container to measure instead.
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    if (list) {
-                        list.scrollBy(0, 1);
-                        list.scrollBy(0, -1);
-                    }
-                    window.dispatchEvent(new Event('resize'));
+                dbg('switchLs: view manipulated (EXPAND)', 'header>div>div:first-child h1', {
+                    source, 'headerH1.textContent before': prevText, 'headerH1.textContent after': headerH1.textContent,
+                    'sidebar style set': 'position:fixed; width:100%; height:100%; left:0; top:0; z-index:20'
                 });
+            } else {
+                dbg('switchLs: view manipulated (EXPAND) - header h1 NOT FOUND, icon not updated', 'header>div>div:first-child h1', { source });
+            }
+            // v6.8: persist across SPA nav + sync bottom nav's active tab highlight.
+            sessionStorage.setItem(LIB_OPEN_KEY, 'true');
+            if (typeof updateActiveTab === 'function') updateActiveTab();
+        } else {
+            // COLLAPSE branch.
+            //
+            // Plain-language version: this runs whenever the library should go from the
+            // big "Your Library" screen back to the small state. We used to do this by
+            // squeezing the library box down to 48x48 pixels ourselves with CSS - but
+            // Spotify's own page never found out the library was supposed to be closed,
+            // so all its buttons and the playlist list stayed fully drawn and just got
+            // squashed into that tiny box (that was the "glitched icon" bug). The real
+            // fix is to let Spotify collapse itself the normal way (a real click already
+            // does this - same idea used for auto-close-after-picking-a-playlist in
+            // v6.7), and here we just clean up after our own fullscreen overlay so it
+            // doesn't stay stuck on top of Spotify's now-properly-collapsed page.
+            //
+            // Dev version: this branch is reached by every collapse, manual or automatic
+            // (switchLs(source) always lands here whenever isExpanded is true - see the
+            // willTakeBranch calculation above). We don't touch Spotify's own layout at all
+            // here; we only clear the inline styles the EXPAND branch above set
+            // (position/width/height/left/top/zIndex), since Spotify's real collapsed
+            // layout should render underneath once our forced overlay is gone. grid-autoclose
+            // (v6.7) additionally fires a real click on the native toggle before this ever
+            // runs, so Spotify's own collapse logic has already run by the time we get here.
+            console.log('#Library: Collapsed');
+            leftSidebar.dataset.fuckExpanded = 'false';
+            leftSidebar.style.position = '';
+            leftSidebar.style.width = '';
+            leftSidebar.style.height = '';
+            leftSidebar.style.left = '';
+            leftSidebar.style.top = '';
+            leftSidebar.style.zIndex = '';
+            dbg('switchLs: view manipulated (COLLAPSE)', '#Desktop_LeftSidebar_Id', {
+                source,
+                note: 'cleared fullscreen-overlay inline styles (position/width/height/left/top/zIndex) - native collapsed layout shows through underneath (v6.7)'
             });
+            // v6.8: clear persistence + sync bottom nav's active tab highlight.
+            sessionStorage.removeItem(LIB_OPEN_KEY);
+            if (typeof updateActiveTab === 'function') updateActiveTab();
         }
-        if (typeof updateActiveTab === 'function') updateActiveTab();
     };
 
     /**
      * closeNowPlay - Close the now-playing right panel if open
      * From r0/e.java line 200: window.closeNowPlay=function(){...}
      */
-    window.closeNowPlay = function() {
+    window.closeNowPlay = function(source = 'unknown') {
         const panelContainer = document.querySelector('#Desktop_PanelContainer_Id');
-        if (panelContainer && panelContainer.parentNode.parentNode.ariaHidden === 'false') {
+        if (!panelContainer) {
+            dbg('closeNowPlay: no-op - #Desktop_PanelContainer_Id not found', '#Desktop_PanelContainer_Id', { source });
+            return;
+        }
+        const ariaHidden = panelContainer.parentNode.parentNode.ariaHidden;
+        if (ariaHidden === 'false') {
             console.log('#Close NowPlaying');
             const toggleBtn = panelContainer.parentNode.parentNode.nextElementSibling?.querySelector('button');
+            dbg('closeNowPlay: view manipulated', '#Desktop_PanelContainer_Id parent parent nextElementSibling button', {
+                source,
+                'panel ariaHidden (before)': ariaHidden,
+                action: toggleBtn ? 'clicked the toggle button to close the panel' : 'toggle button NOT FOUND - could not close',
+                'toggleBtn aria-label': toggleBtn ? toggleBtn.getAttribute('aria-label') : null
+            });
             if (toggleBtn) toggleBtn.click();
+        } else {
+            dbg('closeNowPlay: no-op - panel already hidden', '#Desktop_PanelContainer_Id', { source, ariaHidden });
         }
     };
 
-    // --- Bottom nav bar (Home/Search/Library), ported from SpotiKit 7.3.2.fork ---
+    // ==========================================================================
+    // v6.8: Bottom nav bar (Home/Search/Library) + supporting layout state.
+    // Ported from kitbodega/SpotiKit's 7.3.2.fork (open source, see file header).
+    // All library open/close still goes through switchLs()/real native clicks
+    // above (v6.7) - nothing here reimplements that, it only drives it.
+    // ==========================================================================
+
     const FALLBACK_SVGS = {
         home: '<svg role="img" aria-hidden="true" viewBox="0 0 24 24"><path d="M12.5 3.247a1 1 0 0 0-1 0L4 7.577V20h4.5v-6a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v6H20V7.577zm-2-1.732a3 3 0 0 1 3 0l7.5 4.33a2 2 0 0 1 1 1.732V21a1 1 0 0 1-1 1h-6.5a1 1 0 0 1-1-1v-6h-3v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.577a2 2 0 0 1 1-1.732z"/></svg>',
         search: '<svg role="img" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.533 1.279c-5.18 0-9.407 4.14-9.407 9.279s4.226 9.279 9.407 9.279c2.234 0 4.29-.77 5.907-2.057l4.353 4.353a1 1 0 1 0 1.414-1.414l-4.344-4.344a9.157 9.157 0 0 0 2.077-5.817c0-5.14-4.226-9.28-9.407-9.28zm-7.407 9.279c0-4.006 3.302-7.279 7.407-7.279s7.407 3.273 7.407 7.279-3.302 7.279-7.407 7.279-7.407-3.273-7.407-7.279z"/></svg>',
@@ -595,7 +740,7 @@
 
         const nav = document.createElement('div');
         nav.id = 'sp-bottom-nav';
-        layoutCache.bottomNav = nav;
+        bottomNavEl = nav;
 
         const tabs = [
             { name: 'home', label: 'Home' },
@@ -618,50 +763,152 @@
         updateActiveTab();
     }
 
-    // Makes sure the native sidebar "Your Library" header button (the one
-    // setupLibraryButton wires up inside addCSSJSHack) has our click listener
-    // attached, even if firstFuck/addCSSJSHack hasn't run yet by the time the
-    // bottom nav's Library tab gets tapped. Mirrors setupLibraryButton's own
-    // wiring exactly so there's only ever one listener attached either way.
+    // Single source of truth for wiring the native "Your Library" toggle
+    // button's click listener. v6.8 bug: this used to be two independent
+    // copies of the same wiring code - one inside addCSSJSHack's
+    // setupLibraryButton (v6.7), and a second one duplicated here in
+    // ensureLibButtonWired for the new bottom nav (v6.8) - each with its own
+    // local .fuckd guard. Because #Desktop_LeftSidebar_Id is display:none
+    // whenever the library is collapsed, the *only* way to reach the Library
+    // tab is through the bottom nav, so ensureLibButtonWired's copy always
+    // ran - and depending on exactly when it ran relative to
+    // setupLibraryButton's own passes (immediate + 2s retry), the two copies
+    // could each end up believing they were the first to wire the button,
+    // attaching two separate click listeners to it. A single click then
+    // scheduled switchLs() twice back-to-back: the first call expanded the
+    // library, the second (seeing it now already expanded) collapsed it
+    // straight back - a one-frame flash, then stuck closed no matter how many
+    // times you clicked it after that. Fix: both setupLibraryButton and
+    // ensureLibButtonWired now just call this one function on whatever
+    // element they found, so there is only ever one guard and only ever one
+    // listener, however either of them gets invoked.
+    //
+    // v6.8.3 fix: the shared guard above (checking libBtn.classList.contains
+    // ('fuckd')) still wasn't enough - ensureLibButtonWired() re-queries this
+    // exact button every time the bottom nav's Library tab is tapped, and
+    // Spotify's own re-render of the button (switching its icon/aria-label
+    // between Open<->Collapse) recomputes its class attribute, wiping the
+    // 'fuckd'/'lbtn' classes we'd added - but NOT the click listener we'd
+    // already attached (listeners aren't tied to attributes). So the next tap
+    // saw no '.fuckd', believed the button unwired, and attached a *second*
+    // listener to the very same node. Every click after that fired both
+    // listeners, scheduling switchLs() twice back-to-back (the exact
+    // EXPAND-then-immediately-COLLAPSE flash from Issue 1) - permanently,
+    // since neither listener is ever removed. Fix: track "already wired" via
+    // a plain JS property on the element (__spLibBtnWired) instead of a DOM
+    // class - Spotify's own re-renders only touch attributes/props it
+    // manages (class, aria-label, etc.), so a property we invented ourselves
+    // is invisible to it and can never get wiped out from under us. The
+    // 'fuckd'/'lbtn' classes are still added (used elsewhere as the general
+    // "already processed" convention and for the inline padding/height
+    // styling below), just no longer relied on as the guard.
+    function wireLibraryButton(libBtn) {
+        if (!libBtn || libBtn.__spLibBtnWired) return;
+        libBtn.__spLibBtnWired = true;
+        window.lBtn = libBtn;
+        libBtn.classList.add('fuckd', 'lbtn');
+        libBtn.style.padding = '0';
+        libBtn.style.height = '20px';
+        libBtn.addEventListener('click', function() {
+            if (suppressLibBtnHandler) {
+                suppressLibBtnHandler = false;
+                dbg('libBtn: clicked (synthetic, suppressed)', '#Desktop_LeftSidebar_Id header button[aria-label*="Your Library"]', {
+                    'aria-label at click time': libBtn.getAttribute('aria-label'),
+                    note: 'synthetic click - skipping switchLs() scheduling'
+                });
+                return;
+            }
+            dbg('libBtn: clicked', '#Desktop_LeftSidebar_Id header button[aria-label*="Your Library"]', {
+                'aria-label at click time': libBtn.getAttribute('aria-label'),
+                note: 'native Spotify click handler also runs on this same event; our switchLs() runs after via setTimeout 0'
+            });
+            setTimeout(() => switchLs('libBtn-click'), 0);
+        });
+    }
+
+    // Makes sure the native sidebar "Your Library" header button has our click
+    // listener attached, even if addCSSJSHack/setupLibraryButton hasn't run yet
+    // by the time the bottom nav's Library tab gets tapped (createBottomNav
+    // initializes independently of firstFuck's playBtn-gated loop). Delegates
+    // to wireLibraryButton() (see above) instead of wiring it directly, so
+    // there's only ever one listener attached either way.
     function ensureLibButtonWired() {
         const libBtn = document.querySelector('#Desktop_LeftSidebar_Id header button[aria-label*="Your Library"]');
-        if (libBtn && !libBtn.classList.contains('fuckd')) {
-            window.lBtn = libBtn;
-            libBtn.classList.add('fuckd', 'lbtn');
-            libBtn.style.padding = '0';
-            libBtn.style.height = '20px';
-            libBtn.addEventListener('click', function() {
-                setTimeout(() => switchLs(), 0);
+        wireLibraryButton(libBtn);
+        return libBtn || window.lBtn || null;
+    }
+
+    // Closes the library via the same real-click mechanism as Trigger 1/2
+    // (never CSS-only forcing), used when the bottom nav's Home/Search tab is
+    // tapped while the library overlay is open.
+    function collapseLibraryViaRealClick(source) {
+        const sidebar = document.querySelector('#Desktop_LeftSidebar_Id');
+        if (!sidebar || sidebar.dataset.fuckExpanded !== 'true') return;
+        if (pendingLibCollapse !== null) {
+            clearTimeout(pendingLibCollapse);
+            pendingLibCollapse = null;
+        }
+        const nativeToggle = sidebar.querySelector('header button[aria-label*="Your Library"]');
+        if (nativeToggle && nativeToggle.getAttribute('aria-label') === 'Collapse Your Library') {
+            suppressLibBtnHandler = true;
+            nativeToggle.click();
+        }
+        sidebar.dataset.fuckExpanded = 'false';
+        sidebar.style.position = '';
+        sidebar.style.width = '';
+        sidebar.style.height = '';
+        sidebar.style.left = '';
+        sidebar.style.top = '';
+        sidebar.style.zIndex = '';
+        sessionStorage.removeItem(LIB_OPEN_KEY);
+        if (typeof updateActiveTab === 'function') updateActiveTab();
+        dbg('collapseLibraryViaRealClick: collapsed', '#Desktop_LeftSidebar_Id', { source });
+    }
+
+    // Restores the library to expanded via the same real-click mechanism as
+    // Trigger 1/2 (never a direct dataset/CSS write), used by onLocationChange
+    // below to restore library-open state after an in-app SPA navigation.
+    // v6.8.2 fix: this used to set dataset.fuckExpanded/CSS/header text
+    // directly, bypassing switchLs() - the one invariant spotifucklog's
+    // switchLs() relies on ("we're the only code that ever calls switchLs(),
+    // so this can never desync") only holds if nothing else ever writes
+    // dataset.fuckExpanded directly. That direct write could leave our
+    // tracked state saying "expanded" while Spotify's own native toggle
+    // still showed "Open Your Library" (never actually told to open) - so a
+    // subsequent click branched off the wrong state and switchLs() had to
+    // self-correct with a second call, causing a visible flash. Fix: do a
+    // real click on the native toggle instead, exactly like Trigger 1/2, so
+    // switchLs() is again the only writer of dataset.fuckExpanded.
+    function expandLibraryViaRealClick(source) {
+        const sidebar = document.querySelector('#Desktop_LeftSidebar_Id');
+        if (!sidebar || sidebar.dataset.fuckExpanded === 'true') return;
+        const nativeToggle = ensureLibButtonWired();
+        if (nativeToggle && nativeToggle.getAttribute('aria-label') === 'Open Your Library') {
+            nativeToggle.click();
+            dbg('expandLibraryViaRealClick: triggered native click to restore expanded state', '#Desktop_LeftSidebar_Id', { source });
+        } else {
+            dbg('expandLibraryViaRealClick: native toggle not in expected state or not found - skipped', '#Desktop_LeftSidebar_Id', {
+                source, ariaLabel: nativeToggle ? nativeToggle.getAttribute('aria-label') : null
             });
         }
-        return libBtn || window.lBtn || null;
     }
 
     function handleTabClick(name) {
         if (name === 'library') {
-            // Dispatch a real click on the native library button instead of
-            // calling switchLs() ourselves directly. That button already has
-            // our listener attached (ensureLibButtonWired/setupLibraryButton),
-            // which calls switchLs() on click - so clicking it here achieves
-            // the same open/close, but through Spotify's actual button element
-            // rather than our own CSS-attribute shortcut. Do NOT also call
-            // switchLs() here directly - that would fire it twice (once here,
-            // once from the button's own listener), instantly undoing whatever
-            // it just did. switchLs() with no forceCollapse arg toggles based
-            // on the current state, so clicking this same button again while
-            // the overlay is open correctly collapses it back.
+            // Real click on Spotify's own toggle - fires Spotify's native handler
+            // plus our libBtn listener (setTimeout(0) => switchLs()), exactly like
+            // a manual click (Trigger 1). Never calls switchLs() directly here,
+            // so it can never double-fire.
             const libBtn = ensureLibButtonWired();
             if (libBtn) {
                 libBtn.click();
             } else {
-                // Sidebar not mounted yet - fall back to our own overlay
-                // toggle so the tab still does something.
-                switchLs();
+                dbg('handleTabClick: library tab - native toggle not found yet', '#Desktop_LeftSidebar_Id header button[aria-label*="Your Library"]', {});
             }
             return;
         }
 
-        if (sidebarOverlayActive) switchLs(true);
+        collapseLibraryViaRealClick('bottomNav-' + name + '-tab');
 
         if (name === 'search') {
             if (!location.pathname.startsWith('/search')) {
@@ -680,19 +927,19 @@
         }
     }
 
-    let lastActiveTab = null;
     function updateActiveTab() {
+        const leftSidebar = document.querySelector('#Desktop_LeftSidebar_Id');
+        const isLibraryExpanded = !!leftSidebar && leftSidebar.dataset.fuckExpanded === 'true';
         const path = location.pathname;
         let active = null;
-        if (sidebarOverlayActive) active = 'library';
+        if (isLibraryExpanded) active = 'library';
         else if (path === '/' || path === '/home') active = 'home';
         else if (path.startsWith('/search')) active = 'search';
-        else if (path.startsWith('/collection')) active = 'library';
 
         if (active === lastActiveTab) return;
         lastActiveTab = active;
 
-        const nav = layoutCache.bottomNav || document.getElementById('sp-bottom-nav');
+        const nav = bottomNavEl || document.getElementById('sp-bottom-nav');
         if (!nav) return;
         const buttons = nav.children;
         for (let i = 0; i < buttons.length; i++) {
@@ -701,24 +948,39 @@
         }
     }
 
-    let lastPath = '';
-    function onLocationChange() {
-        if (location.pathname === lastPath) return;
-        lastPath = location.pathname;
-        updateActiveTab();
+    // Ported from SpotiKit: drives the header-visibility CSS (#global-nav-bar /
+    // native search input are hidden except when body carries "sp-search").
+    function updateBodyClass() {
+        const path = location.pathname;
+        let cls = '';
+        if (path === '/' || path === '/home') cls = 'sp-home';
+        else if (path.startsWith('/search')) cls = 'sp-search';
+        else if (path.startsWith('/collection')) cls = 'sp-collection';
+        else if (path.startsWith('/playlist')) cls = 'sp-playlist';
+        else if (path.startsWith('/album')) cls = 'sp-album';
+        else if (path.startsWith('/artist')) cls = 'sp-artist';
+        else if (path.startsWith('/track')) cls = 'sp-track';
 
-        if (sessionStorage.getItem('sp_library_open') === 'true' && !sidebarOverlayActive && !location.pathname.startsWith('/collection')) {
-            const leftSidebar = getLeftSidebar();
-            if (leftSidebar) {
-                leftSidebar.dataset.overlay = 'true';
-                sidebarOverlayActive = true;
-                const rootContainer = getRootContainer();
-                if (rootContainer) {
-                    rootContainer.style.setProperty('--left-sidebar-width', window.innerWidth + 'px');
-                    rootContainer.style.setProperty('--nav-bar-width', window.innerWidth + 'px');
-                }
-                window.dispatchEvent(new Event('resize'));
-                updateActiveTab();
+        if (cls === lastBodyClass) return;
+        if (lastBodyClass) document.body.classList.remove(lastBodyClass);
+        if (cls) document.body.classList.add(cls);
+        lastBodyClass = cls;
+    }
+
+    function onLocationChange() {
+        if (location.pathname === lastNavPath) return;
+        lastNavPath = location.pathname;
+        updateBodyClass();
+        if (typeof updateActiveTab === 'function') updateActiveTab();
+
+        if (sessionStorage.getItem(LIB_OPEN_KEY) === 'true') {
+            const leftSidebar = document.querySelector('#Desktop_LeftSidebar_Id');
+            if (leftSidebar && leftSidebar.dataset.fuckExpanded !== 'true') {
+                // v6.8.2 fix: restore via a real click (expandLibraryViaRealClick)
+                // instead of writing dataset.fuckExpanded/CSS/header text here
+                // directly - see that function's comment for why the direct
+                // write caused a dataset/native desync (Issue 1).
+                expandLibraryViaRealClick('onLocationChange-restore');
             }
         }
     }
@@ -737,12 +999,55 @@
         window.addEventListener('popstate', onLocationChange);
     }
 
-    // Collapsed/"minimized" mini-player state doesn't exist here - Spotifuck's
+    // --- Silent one-time library prewarm (ported from SpotiKit) ---
+    // The sidebar's virtualized list/grid measures its container on mount, but
+    // it now sits at display:none up to that point (see injectCSS's
+    // #Desktop_LeftSidebar_Id rule) - so the actual first real expand would
+    // measure a stale zero-size box and render broken, only fixing itself once
+    // toggled again. This runs the exact same expand/settle/collapse cycle once,
+    // fully invisibly (visibility:hidden + pointer-events:none via .sp-prewarm,
+    // layered on the real [data-fuck-expanded="true"] CSS so it's laid out
+    // identically to a genuine open), before the user ever touches the Library
+    // tab. Bypasses switchLs() entirely (no header text/sessionStorage change).
+    let libraryPrewarmed = false;
+    let libraryPrewarmAttempts = 0;
+    function prewarmLibrarySidebar() {
+        if (libraryPrewarmed) return;
+        const leftSidebar = document.querySelector('#Desktop_LeftSidebar_Id');
+        if (!leftSidebar) {
+            libraryPrewarmAttempts++;
+            if (libraryPrewarmAttempts < 100) setTimeout(prewarmLibrarySidebar, 100);
+            return;
+        }
+        libraryPrewarmed = true;
+
+        leftSidebar.classList.add('sp-prewarm');
+        leftSidebar.dataset.fuckExpanded = 'true';
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const list = leftSidebar.querySelector('[role="list"],[role="grid"],div[class*="view-container"]');
+                if (list) {
+                    list.scrollBy(0, 1);
+                    list.scrollBy(0, -1);
+                }
+                window.dispatchEvent(new Event('resize'));
+
+                setTimeout(() => {
+                    delete leftSidebar.dataset.fuckExpanded;
+                    leftSidebar.classList.remove('sp-prewarm');
+                    window.dispatchEvent(new Event('resize'));
+                    console.log('#Library: pre-warmed silently - first real open should render correctly now');
+                }, 60);
+            });
+        });
+    }
+
+    // Collapsed/minimized mini-player state doesn't exist here - Spotifucklog's
     // playback controls card is always shown expanded. Its real height still
     // varies with content though, so this keeps --sp-np-bar-height in sync via
-    // a live ResizeObserver - the main-view clip CSS (injectCSS) subtracts that
+    // a live ResizeObserver - the #main-view clip CSS (injectCSS) subtracts that
     // variable, plus the bottom nav's fixed 56px, from 100dvh.
-    let npBarResizeObserver = null;
     function updateNPBarHeightVar() {
         const player = document.querySelector('aside[data-testid=now-playing-bar]');
         if (player) {
@@ -781,23 +1086,33 @@
                 // Add click handler
                 window.pBtn.addEventListener('click', () => {
                     console.log('PlayClicked');
+                    const ariaLabelAtClick = window.pBtn.getAttribute('aria-label');
+                    dbg('pBtn: clicked', 'aside button[data-testid=control-button-playpause]', {
+                        'aria-label at click time': ariaLabelAtClick, ulFlag
+                    });
                     if (window.pBtn && window.pBtn.getAttribute('aria-label') !== 'Play') {
                         console.log('Pause Req');
                         ulFlag = false;
+                        dbg('pBtn: decision', 'aside button[data-testid=control-button-playpause]', { decision: 'Pause requested, ulFlag reset to false' });
                     } else if (!ulFlag) {
                         console.log('Play Req');
                         ulFlag = true;
+                        dbg('pBtn: decision', 'aside button[data-testid=control-button-playpause]', { decision: 'Play requested, ulFlag set true, arming 10s unlocker timeout' });
                         setTimeout(() => {
                             console.log('Unlocker Timeout Reached');
                             // Add null check for pBtn in timeout callback
                             if (window.pBtn && ulFlag && window.pBtn.getAttribute('aria-label') === 'Play') {
                                 console.log('#Unlocking!');
                                 ulFlag = false;
+                                dbg('pBtn: unlocker timeout fired', 'aside button[data-testid=control-button-playpause]', { action: 'still shows Play after 10s - forcing unlock, ulFlag reset' });
                             } else if (ulFlag) {
                                 console.log('Playing, Removing Unlocker');
                                 ulFlag = false;
+                                dbg('pBtn: unlocker timeout fired', 'aside button[data-testid=control-button-playpause]', { action: 'no longer shows Play (playback started) - unlocker removed, ulFlag reset' });
                             }
                         }, 10000);
+                    } else {
+                        dbg('pBtn: decision', 'aside button[data-testid=control-button-playpause]', { decision: 'ignored - unlocker already pending (ulFlag true)' });
                     }
                 });
 
@@ -825,18 +1140,25 @@
 
             if (libBtn && !libBtn.classList.contains('fuckd')) {
                 console.log('LibBtnFuckd');
-                window.lBtn = libBtn;
-                libBtn.classList.add('fuckd', 'lbtn');
-                libBtn.style.padding = '0';
-                libBtn.style.height = '20px';
-                libBtn.addEventListener('click', function() {
-                    setTimeout(() => switchLs(), 0);
-                });
+                // v6.8 fix: delegate to the single shared wireLibraryButton() helper
+                // (see its definition near ensureLibButtonWired below) instead of
+                // wiring the listener here directly - having two separate copies of
+                // this wiring was the cause of the double-switchLs()-call library bug.
+                wireLibraryButton(libBtn);
 
-                // No startup auto-collapse here anymore: the sidebar is display:none
-                // by default (see injectCSS), so there's no docked-48x48 state left
-                // to force it back into - it simply stays hidden until switchLs()
-                // opens it as the full overlay.
+                // Collapse library on startup if it's expanded
+                // Check if button says "Collapse" (meaning library is currently expanded)
+                if (libBtn.getAttribute('aria-label') === 'Collapse Your Library') {
+                    console.log('Library is expanded on startup, collapsing it...');
+                    dbg('libBtn: startup collapse triggered', '#Desktop_LeftSidebar_Id header button[aria-label*="Your Library"]', {
+                        reason: 'aria-label was "Collapse Your Library" on script init, meaning library was expanded - forcing collapse via a real click',
+                        action: 'calling libBtn.click() (real click, not switchLs directly) so Spotify updates its own state/aria-label too'
+                    });
+                    // Click the button to let Spotify update its state properly
+                    // This ensures the button will show "Open your library" after collapse
+                    suppressLibBtnHandler = true;
+                    libBtn.click();
+                }
             }
         };
 
@@ -850,9 +1172,15 @@
                     // Check if clicked element or its parent is a folder
                     let target = event.target;
                     let isFolder = false;
+                    const traversalLog = [];
 
                     // Traverse up to 5 levels to find the button element
                     for (let i = 0; i < 5 && target; i++) {
+                        traversalLog.push({
+                            level: i, tag: target.tagName,
+                            'aria-labelledby': target.getAttribute('aria-labelledby'),
+                            'aria-describedby': target.getAttribute('aria-describedby')
+                        });
                         // Check aria-labelledby for :folder: pattern (verified from Spotify DOM)
                         const ariaLabelledBy = target.getAttribute('aria-labelledby');
                         if (ariaLabelledBy && ariaLabelledBy.includes(':folder:')) {
@@ -872,15 +1200,46 @@
                         target = target.parentElement;
                     }
 
+                    dbg('libGrid: clicked', '#Desktop_LeftSidebar_Id div[role=grid]', {
+                        'clicked element': event.target.tagName + (event.target.className ? '.' + String(event.target.className).split(' ').join('.') : ''),
+                        isFolder, traversal: traversalLog
+                    });
+
                     // Only auto-close library if it's NOT a folder
                     if (!isFolder) {
                         console.log('AutoCloseLib (playlist/item clicked)');
                         // Add delay to allow Spotify's navigation to complete first
-                        // IMPORTANT: Use switchLs(true) for direct CSS collapse, NOT lBtn.click()
-                        // Clicking lBtn inside folders triggers "back" navigation which cancels playlist navigation
-                        setTimeout(() => {
-                            switchLs(true);  // Direct collapse without clicking button
-                            closeNowPlay();
+                        // Uses a real click on the native toggle instead of CSS-only forcing, so Spotify's
+                        // own layout actually switches to collapsed markup (see v6.7 changelog).
+                        // Tracked in pendingLibCollapse so a later switchLs() call (e.g. the user
+                        // reopening the library right away) can cancel this before it fires.
+                        if (pendingLibCollapse !== null) clearTimeout(pendingLibCollapse);
+                        dbg('libGrid: scheduling delayed auto-collapse', '#Desktop_LeftSidebar_Id div[role=grid]', {
+                            delayMs: 150, note: 'will click native libBtn (if expanded) + closeNowPlay() in 150ms unless cancelled by another switchLs() call first'
+                        });
+                        pendingLibCollapse = setTimeout(() => {
+                            pendingLibCollapse = null;
+                            dbg('libGrid: delayed auto-collapse FIRING now', '#Desktop_LeftSidebar_Id div[role=grid]', {});
+                            const sidebar = document.querySelector('#Desktop_LeftSidebar_Id');
+                            const nativeToggle = sidebar ? sidebar.querySelector('header button[aria-label*="Your Library"]') : null;
+                            if (nativeToggle && nativeToggle.getAttribute('aria-label') === 'Collapse Your Library') {
+                                suppressLibBtnHandler = true;
+                                nativeToggle.click();
+                            }
+                            if (sidebar) {
+                                sidebar.dataset.fuckExpanded = 'false';
+                                sidebar.style.position = '';
+                                sidebar.style.width = '';
+                                sidebar.style.height = '';
+                                sidebar.style.left = '';
+                                sidebar.style.top = '';
+                                sidebar.style.zIndex = '';
+                            }
+                            // v6.8: this collapse path bypasses switchLs() entirely (see comment
+                            // above), so it needs its own persistence-clear + active-tab sync too.
+                            sessionStorage.removeItem(LIB_OPEN_KEY);
+                            if (typeof updateActiveTab === 'function') updateActiveTab();
+                            closeNowPlay('grid-autoclose');
                         }, 150);  // 150ms allows playlist navigation to initiate
                     }
                 });
@@ -892,7 +1251,10 @@
             const homeBtn = document.querySelector('#global-nav-bar button[data-testid=home-button]:not(.fuckd)');
             if (homeBtn) {
                 homeBtn.classList.add('fuckd');
-                homeBtn.addEventListener('click', () => { closeNowPlay(); });
+                homeBtn.addEventListener('click', () => {
+                    dbg('homeBtn: clicked', '#global-nav-bar button[data-testid=home-button]', { action: 'calling closeNowPlay()' });
+                    closeNowPlay('homeBtn-click');
+                });
             }
         };
 
@@ -903,11 +1265,19 @@
                 searchInput.classList.add('fuckd');
                 searchInput.addEventListener('focus', () => {
                     const npBar = document.querySelector('aside[data-testid=now-playing-bar]');
+                    dbg('searchInput: focus', 'input[data-testid=search-input]', {
+                        action: 'hiding aside[data-testid=now-playing-bar] and calling closeNowPlay()',
+                        'npBar found': !!npBar
+                    });
                     if (npBar) npBar.style.display = 'none';
-                    closeNowPlay();
+                    closeNowPlay('searchInput-focus');
                 });
                 searchInput.addEventListener('blur', () => {
                     const npBar = document.querySelector('aside[data-testid=now-playing-bar]');
+                    dbg('searchInput: blur', 'input[data-testid=search-input]', {
+                        action: 'restoring aside[data-testid=now-playing-bar] display:flex',
+                        'npBar found': !!npBar
+                    });
                     if (npBar) npBar.style.display = 'flex';
                 });
             }
@@ -918,7 +1288,10 @@
             const userBtn = document.querySelector('button[data-testid=user-widget-link]:not(.fuckd)');
             if (userBtn) {
                 userBtn.classList.add('fuckd');
-                userBtn.addEventListener('click', () => { closeNowPlay(); });
+                userBtn.addEventListener('click', () => {
+                    dbg('userBtn: clicked', 'button[data-testid=user-widget-link]', { action: 'calling closeNowPlay()' });
+                    closeNowPlay('userBtn-click');
+                });
             }
         };
 
@@ -1011,85 +1384,30 @@ aside[data-testid=now-playing-bar]{background:#000!important;box-shadow:none;bor
         `;
         document.head.appendChild(amoled);
 
-        // --- Bottom nav bar + library-overlay layout (ported from SpotiKit 7.3.2.fork) ---
+        // --- Bottom nav bar + library-overlay layout + header visibility (v6.8) ---
+        // Kept as its own <style> element (rather than merged into the blocks
+        // above) so none of the existing v6.7 CSS above has to be touched.
         const bottomNavLayout = document.createElement('style');
         bottomNavLayout.textContent = `
-.Root__top-container{grid-template-columns:auto 1fr auto!important}
-
-/* Sidebar is reached only through the bottom nav's Library tab now - hidden by
-   default, full-viewport overlay once switchLs() sets data-overlay="true". */
+/* Sidebar now reached only through the bottom nav's Library tab - hidden by
+   default, full-screen overlay (unchanged from v6.7) once switchLs() sets
+   dataset.fuckExpanded="true". */
 #Desktop_LeftSidebar_Id{
   display:none!important
 }
-#Desktop_LeftSidebar_Id[data-overlay="true"]{
-  cursor:default!important;
-  pointer-events:auto!important;
-  width:100vw!important;
-  min-width:100vw!important;
-  max-width:100vw!important;
-  height:100vh!important;
-  bottom:0!important;
-  left:0!important;
-  border-radius:0!important;
-  background:#121212!important;
-  backdrop-filter:none!important;
-  -webkit-backdrop-filter:none!important;
-  border:none!important;
-  box-shadow:none!important;
-  z-index:999!important;
+#Desktop_LeftSidebar_Id[data-fuck-expanded="true"]{
   display:flex!important;
-  flex-direction:column!important;
-  overflow:hidden!important
+  flex-direction:column!important
 }
-/* Silent-prewarm pass (see prewarmLibrarySidebar): same [data-overlay="true"]
-   layout as a real open, laid out identically, but invisible and inert - so
-   the very first time the user actually opens it, it's already had a real
-   layout/measure pass and renders correctly instead of broken. */
-#Desktop_LeftSidebar_Id.sp-prewarm[data-overlay="true"]{
+/* Silent-prewarm pass (see prewarmLibrarySidebar): same [data-fuck-expanded="true"]
+   layout as a real open, laid out identically, but invisible and inert. */
+#Desktop_LeftSidebar_Id.sp-prewarm[data-fuck-expanded="true"]{
   visibility:hidden!important;
-  pointer-events:none!important;
-}
-#Desktop_LeftSidebar_Id[data-overlay="true"]>*{
-  pointer-events:auto!important;
-  width:100vw!important;
-  min-width:100vw!important;
-  max-width:100vw!important
-}
-#Desktop_LeftSidebar_Id[data-overlay="true"] .YourLibraryX,
-#Desktop_LeftSidebar_Id[data-overlay="true"] [class*="YourLibraryX"]{
-  width:100vw!important;
-  min-width:100vw!important;
-  max-width:100vw!important;
-  background:transparent!important;
-  height:100%!important
-}
-#Desktop_LeftSidebar_Id[data-overlay="true"] nav{width:100vw!important;max-width:100vw!important}
-#Desktop_LeftSidebar_Id[data-overlay="true"] header button[aria-label*="Create"]{
-  position:absolute!important;
-  top:14px!important;
-  right:14px!important;
-  width:36px!important;
-  height:36px!important
-}
-#Desktop_LeftSidebar_Id[data-overlay="true"] [data-testid="resize-bar"],
-#Desktop_LeftSidebar_Id[data-overlay="true"] [class*="ResizeBar"],
-#Desktop_LeftSidebar_Id[data-overlay="true"] [class*="resize-bar"],
-#Desktop_LeftSidebar_Id[data-overlay="true"] [class*="Resizer"]{
-  display:none!important;
-  width:0!important;
   pointer-events:none!important
 }
-[data-testid="resize-bar"],[class*="ResizeBar"]{display:none!important}
-#Desktop_LeftSidebar_Id[data-overlay="true"] [data-overlayscrollbars-viewport],
-#Desktop_LeftSidebar_Id[data-overlay="true"] [class*="os-viewport"],
-#Desktop_LeftSidebar_Id[data-overlay="true"] div[role="grid"],
-#Desktop_LeftSidebar_Id[data-overlay="true"] [data-testid="LibraryRoot"]{padding-bottom:80px!important}
 
-/* Nothing here is taken out of grid flow, so nothing needs its height measured
-   or subtracted at this level - .Root__main-view becomes a column flexbox and
-   its normal-flow children (the real page content) share the flexible space,
-   scrolling internally, while #sp-bottom-nav (fixed, see below) reserves its
-   own space via the height calc on the actual scroll container. */
+/* main-view becomes a clipped flex column so its scrollable content stops
+   above the player+nav instead of scrolling on behind them. */
 .Root__main-view,
 div[data-testid=main-view],
 #main-view{
@@ -1098,9 +1416,6 @@ div[data-testid=main-view],
   min-height:0!important;
   overflow:hidden!important;
 }
-
-/* clip the real scroll container itself so it stops above the player + nav
-   instead of scrolling on behind them */
 div[data-testid=main-view],
 #main-view{
   height:calc(100dvh - var(--sp-np-bar-height, 0px) - 56px)!important;
@@ -1154,9 +1469,9 @@ div[data-testid=main-view],
 #sp-bottom-nav button svg{width:24px;height:24px;fill:currentColor}
 #sp-bottom-nav button span{font-size:10px;letter-spacing:0.5px}
 
-/* Player position only - colors/layout above (background, box-shadow, border,
-   control scaling, etc.) are untouched Spotifuck styling. It now sits fixed,
-   directly above the new bottom nav, instead of in normal document flow. */
+/* Player position only - colors/box-shadow/border/control scaling above (v6.7
+   CSS + AMOLED block) are untouched. It now sits fixed, directly above the new
+   bottom nav, instead of in normal document flow. */
 aside[data-testid=now-playing-bar]{
   margin:0!important;
   position:fixed!important;
@@ -1164,11 +1479,26 @@ aside[data-testid=now-playing-bar]{
   right:0!important;
   bottom:56px!important;
   z-index:9998!important;
-  border-radius:0!important;
   max-height:40vh!important;
   overflow-y:auto!important;
   contain:layout style paint
 }
+
+/* Home/Search now live in the bottom nav - top header (home icon, bell,
+   upgrade button, profile menu) and the native search input are hidden by
+   default, shown only while the Search tab is active (body.sp-search). */
+#global-nav-bar{display:none!important}
+body.sp-search #global-nav-bar{display:flex!important}
+/* Home already lives in the bottom nav - strip the native Home icon back out
+   of global-nav-bar even while the rest of the bar is shown for search, so it
+   doesn't duplicate the bottom nav's Home tab. Ported from SpotiKit 7.3.2.fork,
+   missing here previously (the bar-level show/hide above was ported but this
+   button-level follow-up rule wasn't, leaving native Home visible during search). */
+#global-nav-bar button[data-testid=home-button],
+#global-nav-bar a[aria-label*="Home"],
+#global-nav-bar a[aria-label*="Inicio"]{display:none!important}
+input[data-testid="search-input"]{display:none!important}
+body.sp-search input[data-testid="search-input"]{display:flex!important}
         `;
         document.head.appendChild(bottomNavLayout);
 
@@ -1180,15 +1510,17 @@ aside[data-testid=now-playing-bar]{
         injectCSS();
         firstFuck();
 
-        // Bottom nav bar init - independent of firstFuck's playBtn-gated pass,
-        // so Home/Search/Library are available as soon as the body exists,
-        // same as SpotiKit. Also clears any stale library-open flag from a
-        // previous tab/session before onLocationChange can act on it.
-        sessionStorage.removeItem('sp_library_open');
+        // v6.8: bottom nav init - independent of firstFuck's playBtn-gated pass,
+        // so Home/Search/Library are available as soon as the body exists.
+        // Also clears any stale library-open flag from a previous tab/session
+        // before onLocationChange can act on it (fresh page load always starts
+        // collapsed, per v6.7's own startup-collapse behavior).
+        sessionStorage.removeItem(LIB_OPEN_KEY);
         const waitForBottomNavBody = setInterval(() => {
             if (document.body) {
                 clearInterval(waitForBottomNavBody);
-                lastPath = location.pathname;
+                lastNavPath = location.pathname;
+                updateBodyClass();
                 createBottomNav();
                 hookHistory();
                 prewarmLibrarySidebar();
@@ -1206,6 +1538,7 @@ aside[data-testid=now-playing-bar]{
     });
 
     console.log('🚀 Spotifuck v6 Ready (APK v1.6.4 Port)');
+    console.log('%c[SPFDBG] filter this console by "SPFDBG" to see every button click, selector, and resulting view change', 'color:#1ed760;font-weight:bold;');
 
     // --- Visual premium spoof & payment-page takeovers (ported from Myst1cX/SpotiwebJS.js, v7.0.fork)
     const PINK = '#FFD2D7';
@@ -1303,14 +1636,20 @@ aside[data-testid=now-playing-bar]{
                 logChange('a, button, [role="button"]', orig, 'DONT JOIN PREMIUM');
                 el.textContent = 'DONT JOIN PREMIUM';
                 el.style.cssText += `background:${PINK}!important;color:#000!important;border:none!important;border-radius:20px!important;font-weight:700!important;pointer-events:none!important;cursor:default!important;`;
-                el.onclick = e => { e.preventDefault(); e.stopPropagation(); };
+                el.onclick = e => {
+                    dbg('spoofed "DONT JOIN PREMIUM" button: clicked', 'a, button, [role="button"] (originally Get/Buy/Join Premium)', { action: 'preventDefault + stopPropagation (click is a no-op)' });
+                    e.preventDefault(); e.stopPropagation();
+                };
             }
 
             if (/^(explore|view)\s*plans/.test(t)) {
                 logChange('a, button, [role="button"]', orig, 'Manage plan');
                 el.textContent = 'Manage plan';
                 el.style.cssText += `background:transparent!important;color:#fff!important;border:1px solid #727272!important;border-radius:20px!important;font-weight:700!important;pointer-events:none!important;cursor:default!important;`;
-                el.onclick = e => { e.preventDefault(); e.stopPropagation(); };
+                el.onclick = e => {
+                    dbg('spoofed "Manage plan" button: clicked', 'a, button, [role="button"] (originally Explore/View plans)', { action: 'preventDefault + stopPropagation (click is a no-op)' });
+                    e.preventDefault(); e.stopPropagation();
+                };
             }
             if (/^try/.test(t) && !el.dataset.spDone) {
                 logChange('a, button, [role="button"]', orig, '(hidden)');
@@ -1404,6 +1743,9 @@ aside[data-testid=now-playing-bar]{
             left.appendChild(leftText);
             left.onclick = e => {
                 e.stopPropagation();
+                dbg('premiumBanner left (Edit profile): clicked', '.__sp custom div (replaces [data-testid="compact-banner"])', {
+                    action: 'redirecting to https://www.spotify.com/us/account/profile/'
+                });
                 window.location.href = 'https://www.spotify.com/us/account/profile/';
             };
             const right = document.createElement('div');
@@ -1422,6 +1764,9 @@ aside[data-testid=now-playing-bar]{
             right.appendChild(rightText);
             right.onclick = e => {
                 e.stopPropagation();
+                dbg('premiumBanner right (Payment method): clicked', '.__sp custom div (replaces [data-testid="compact-banner"])', {
+                    action: 'redirecting to https://www.spotify.com/us/account/saved-payment-cards/'
+                });
                 window.location.href = 'https://www.spotify.com/us/account/saved-payment-cards/';
             };
             premiumBanner.innerHTML = '';
@@ -1455,7 +1800,12 @@ aside[data-testid=now-playing-bar]{
             main.innerHTML = '';
             main.appendChild(wrapper);
             document.querySelectorAll('form, button[type="submit"], [data-testid*="pay"], [data-testid*="checkout"]').forEach(el => {
-                el.onclick = e => { e.preventDefault(); e.stopPropagation(); };
+                el.onclick = e => {
+                    dbg('payments page blocker: clicked', 'form, button[type="submit"], [data-testid*="pay"], [data-testid*="checkout"]', {
+                        'element tag': el.tagName, action: 'preventDefault + stopPropagation (click is a no-op)'
+                    });
+                    e.preventDefault(); e.stopPropagation();
+                };
             });
         }
     }
