@@ -70,6 +70,23 @@
 // English via a hidden iframe, verifies the flip stuck on the next load,
 // and retries a capped number of times if it didn't.
 
+// Fifth big change:
+// Ported the Now Playing View (NPV) hiding block (open.spotify.com only) 
+// from spotify-web-lyrics-plus userscript, version 17.46. 
+// This is just a hotfix since that script has been refactored to a different NPV approach. (
+// The web version will eventually receive it aswell. Now I am doing further testing
+// The method I just ported collapses the native `.zjCIcN96KsMfWwRo` right-side panel 
+// container to zero width specifically when it's showing NPV (matched via
+// aria-label="Now playing view" or a .NowPlayingView class, so Queue and
+// Connect to a Device - which share the same container - are left alone),
+// and hides Spotify's own native "Show Now Playing view" toggle button
+// (`.wJiY1vDfuci2a4db`) so it's not left as a stray clickable/draggable
+// element. Both are hardcoded hashed classes rather than stable
+// aria-label-based selectors, so may need updating if Spotify changes its
+// CSS-in-JS build. NPV's DOM stays fully present (not removed) - only
+// visually collapsed - so it's still accessible to JS for track info/
+// lyrics fetching (was once needed for Spotify provider but not anymore).
+
 // --- Per-site visual premium spoof toggles ---
 // Declared at module scope (not inside either IIFE below) because both the
 // text/badge-spoof IIFE and the separate ad-slot-removal IIFE need to read
@@ -696,3 +713,31 @@ if (typeof GM_registerMenuCommand === 'function') {
         observer.disconnect();
     });
 })();
+
+if (HOST_IS_OPEN) {
+    /* NowPlayingView logic: Using the original `.zjCIcN96KsMfWwRo` container approach.
+        The `.zjCIcN96KsMfWwRo` is the panel where NPV, Queue, and Connect a device are all displayed after clicking their respective buttons.
+        We apply the hiding style ONLY when .zjCIcN96KsMfWwRo contains NowPlayingView (identified by aria-label="Now playing view" or .NowPlayingView class).
+        This ensures Queue and Connect modals remain unaffected while NowPlayingView is hidden.
+        The container is collapsed to zero width, allowing the rest of the UI to expand and fill the area.
+        NowPlayingView and its DOM structure remain fully accessible to JavaScript for track information and lyrics fetching (ProviderSpotify needs it).
+    */
+    const styleId = 'lyricsplus-hide-npv-style';
+    if (!document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            .zjCIcN96KsMfWwRo:has([aria-label="Now playing view"]),
+            .zjCIcN96KsMfWwRo:has(.NowPlayingView) {
+                min-width: 0 !important;
+                max-width: 0 !important;
+                flex-basis: 0 !important;
+                overflow: hidden !important;
+            }
+            .wJiY1vDfuci2a4db { /* The "Show Now Playing view" button */
+                display: none !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
