@@ -15,7 +15,7 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_setValue
 // @grant        GM_getValue
-// @run-at       document-idle
+// @run-at       document-start
 // @homepageURL  https://github.com/Myst1cX/SpotiKit
 // @supportURL   https://github.com/Myst1cX/SpotiKit/issues
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.js
@@ -85,6 +85,72 @@
 // Scoped it behind `html:not(.npv-open)` (unlike spotifuck's unconditional
 // version) so it doesn't squash NPV's own panel while legitimately open.
 
+// Sixth big change:
+// Fixed setupNpvWidgetTrigger (the player-bar album art click listener):
+// it unconditionally set userOpenedNPV=true on every click, but the album
+// art is a native TOGGLE - the second click closes NPV, and that close
+// never runs through closeNowPlay() (the only other place that resets the
+// flag), so userOpenedNPV was left stuck true after closing via album art.
+// The next unrelated native NPV open (e.g. a playlist's play button
+// auto-opening NPV) was then wrongly trusted as authorized and never
+// auto-closed by the guard. Now computes willOpen from isNpvOpen() before
+// the click, same as clickNP() already did, and sets the flag to match
+// either direction.
+// Ported Spotifuck's SPFDBG debug-logging system (dbg(event, selector,
+// details), off by default, toggled via its own userscript-manager menu
+// command) into every click handler and NPV-guard state-change function:
+// the two spoofed premium buttons, the Edit profile/Payment method banner
+// buttons, the payments-page blocker, closeNowPlay(), clickNP(),
+// npvGuardObserver's autoclose branch, setupNpvButton, the album-art
+// listener above, and the Queue/Connect panel-trigger listeners. Declared
+// at module scope (outside both IIFEs and the NPV guard block) so all
+// three sections can log through it.
+// Investigated the Queue/Connect panel's close (X) button being scrolled
+// out of the visible viewport (present in the DOM, just off-screen) -
+// attempted porting Spotifuck's #main-view height-clipping CSS
+// (min-height:0 + overflow:hidden, without Spotifuck's bottom-nav/player
+// height subtraction, which doesn't apply here) but this did NOT fix it in
+// testing. Reverted; root cause still open.
+
+// Seventh big change:
+// Finished the dbg() debug-logging coverage: logChange, applyReplacements,
+// scanText, run()'s DOM-scanning pass, handleMutations/startObserver (the
+// actual debounce), forceEnglish, forceEnglishAccountSetting,
+// applyEnglishToLanguageSelect, and the ad-slot-removal observer didn't log
+// through dbg() yet - they now do.
+// forceEnglish/forceEnglishAccountSetting/applyEnglishToLanguageSelect used
+// to trace via plain console.log('SpotiwebJS: ...') instead - refactored
+// those into dbg() so they're gated behind the same toggle and filterable
+// by "SPFDBG" like everything else.
+// Moved the "Debug Logging (console)" menu command to the bottom of the
+// userscript-manager menu (was 3rd, now 4th/last, after the two spoof
+// toggles and "Show everything replaced so far").
+
+// Eighth big change - unionized three places that had drifted from Spotifuck:
+// a) Renamed run() to runPremium() to match Spotifuck's name for the same
+//    DOM-scan pass - purely cosmetic, no behavior change.
+// b) Tried making forceEnglish() call forceEnglishAccountSetting()
+//    unconditionally, same as Spotifuck, instead of only when
+//    location.hostname === 'open.spotify.com'. Reverted - confirmed it
+//    added no real behavior on www.spotify.com/payments.spotify.com (that
+//    function's hidden iframe is hardcoded to
+//    https://open.spotify.com/preferences, so calling it from those hosts
+//    just hits the existing cross-origin catch block and gives up), so kept
+//    the hostname gate rather than carry a pointless iframe load.
+// c) Ad-slot removal was previously ungated by host here - it ran on every
+//    matched page (open/www/payments) and relied solely on the runtime
+//    premiumSpoofEnabledHere() check to no-op elsewhere, meaning a live
+//    MutationObserver plus repeated no-op queries on www/payments pages
+//    where these ad selectors can never match anything (they're specific to
+//    the open.spotify.com web player). Now wrapped in the same
+//    `if (HOST_IS_OPEN)` gate Spotifuck uses, so the observer isn't even
+//    created on hosts where it can never do anything.
+// d) Switched @run-at from document-idle to document-start (matching
+//    Spotifuck) so the navigator.language/navigator.languages spoof at the
+//    top of forceEnglish() actually runs before Spotify's own scripts read
+//    it on open.spotify.com - at document-idle that spoof was set too late
+//    to affect anything Spotify computed from it during load.
+
 // --- Per-site visual premium spoof toggles ---
 // Declared at module scope (not inside either IIFE below) because both the
 // text/badge-spoof IIFE and the separate ad-slot-removal IIFE need to read
@@ -120,6 +186,26 @@ if (typeof GM_registerMenuCommand === 'function') {
         () => { setFlag(SPOOF_WWW_KEY, !getFlag(SPOOF_WWW_KEY)); location.reload(); }
     );
 }
+
+// --- Debug logging (ported from Spotifuck) ---
+// Off by default; console.log spam would otherwise fire on every click for
+// every ordinary user. Declared at module scope (not inside either IIFE
+// below, and not inside the NPV guard block) since all three sections need
+// it. Every click handler / state-change function logs through dbg() with
+// the same shape: dbg('event name', 'selector used to find the element',
+// { ...state/details }). Filter your console by "SPFDBG" to isolate just
+// this script's activity.
+const DEBUG_KEY = 'spotiweb_debugLog';
+function debugLoggingEnabled() {
+    try { return typeof GM_getValue === 'function' ? GM_getValue(DEBUG_KEY, false) : false; }
+    catch (e) { return false; }
+}
+function dbg(event, selector, details) {
+    if (!debugLoggingEnabled()) return;
+    console.log(`%c[SPFDBG] ${event}`, 'color:#1ed760;font-weight:bold;', 'selector:', selector, details || '');
+}
+
+console.log('%c[SPFDBG] filter this console by "SPFDBG" to see every button click, selector, and resulting view change', 'color:#1ed760;font-weight:bold;');
 
 (function() {
     'use strict';
@@ -161,6 +247,7 @@ if (typeof GM_registerMenuCommand === 'function') {
     const replacementLog = new Map();
 
     function logChange(selector, from, to) {
+        dbg('logChange: replacement recorded', selector, { from, to });
         const key = `${selector}\u0000${from}\u0000${to}`;
         const existing = replacementLog.get(key);
         if (existing) {
@@ -190,11 +277,15 @@ if (typeof GM_registerMenuCommand === 'function') {
                 logChange('(page text)', from, to);
             }
         }
-        if (c) node.nodeValue = v;
+        if (c) {
+            dbg('applyReplacements: text node updated', '(text node)', { before: node.nodeValue, after: v });
+            node.nodeValue = v;
+        }
     }
 
     function scanText(root) {
         if (!root) return;
+        dbg('scanText: DOM scan pass', 'TreeWalker(root, SHOW_TEXT)', { root: root === document.body ? 'document.body' : (root.id || root.className || root.nodeName) });
         const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
         let n;
         while (n = w.nextNode()) applyReplacements(n);
@@ -208,6 +299,7 @@ if (typeof GM_registerMenuCommand === 'function') {
     // the page itself renders in English rather than relying on the
     // find-and-replace pass to catch up after the fact.
     function forceEnglish() {
+        dbg('forceEnglish: spoofing navigator.language', 'navigator.language/languages', { value: 'en-US' });
         try {
             Object.defineProperty(navigator, 'language', { get: () => 'en-US', configurable: true });
             Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'], configurable: true });
@@ -217,6 +309,7 @@ if (typeof GM_registerMenuCommand === 'function') {
             const ENGLISH_REGIONS = ['us', 'gb', 'ca', 'au', 'ie', 'nz'];
             const m = location.pathname.match(/^\/([a-z]{2})(\/.*)?$/i);
             if (m && !ENGLISH_REGIONS.includes(m[1].toLowerCase())) {
+                dbg('forceEnglish: redirecting off non-English region path', location.pathname, { to: '/us' + (m[2] || '/') });
                 location.replace(location.origin + '/us' + (m[2] || '/') + location.search + location.hash);
                 return;
             }
@@ -225,6 +318,7 @@ if (typeof GM_registerMenuCommand === 'function') {
         if (location.hostname === 'open.spotify.com') {
             const m2 = location.pathname.match(/^\/intl-([a-z]{2})(\/.*)?$/i);
             if (m2 && m2[1].toLowerCase() !== 'en') {
+                dbg('forceEnglish: redirecting off /intl-xx/ prefix', location.pathname, { to: m2[2] || '/' });
                 location.replace(location.origin + (m2[2] || '/') + location.search + location.hash);
                 return;
             }
@@ -282,7 +376,7 @@ if (typeof GM_registerMenuCommand === 'function') {
                 try {
                     fire(iframe.contentDocument, cleanup);
                 } catch (e) {
-                    console.log('SpotiwebJS: could not access preferences iframe', e);
+                    dbg('forceEnglishAccountSetting: could not access preferences iframe', 'iframe.contentDocument', { error: String(e) });
                     cleanup();
                     fire(null, cleanup);
                 }
@@ -292,7 +386,7 @@ if (typeof GM_registerMenuCommand === 'function') {
         };
 
         const giveUp = (reason) => {
-            console.log('SpotiwebJS: ' + reason + ' - not retrying automatically');
+            dbg('forceEnglishAccountSetting: giving up', '(language flip retry)', { reason });
         };
 
         const attemptFlip = () => {
@@ -307,11 +401,11 @@ if (typeof GM_registerMenuCommand === 'function') {
                     if (!result.changed) {
                         cleanup();
                         localStorage.removeItem(ATTEMPTS_KEY);
-                        console.log('SpotiwebJS: account language already English - no reload needed');
+                        dbg('forceEnglishAccountSetting: language already English', '#desktop.settings.selectLanguage', { reload: false });
                         return;
                     }
                     localStorage.setItem(PENDING_KEY, 'true');
-                    console.log('SpotiwebJS: dispatched English change - reloading to verify it saved');
+                    dbg('forceEnglishAccountSetting: dispatched change, reloading to verify', '#desktop.settings.selectLanguage', { reload: true });
                     setTimeout(() => { cleanup(); location.reload(); }, 1000);
                 });
             });
@@ -328,7 +422,7 @@ if (typeof GM_registerMenuCommand === 'function') {
                 cleanup();
                 if (result.found && result.value === 'en') {
                     localStorage.removeItem(ATTEMPTS_KEY);
-                    console.log('SpotiwebJS: verified account language is now English');
+                    dbg('forceEnglishAccountSetting: verified language is English', '#desktop.settings.selectLanguage', {});
                     return;
                 }
                 if (!result.found) {
@@ -341,7 +435,7 @@ if (typeof GM_registerMenuCommand === 'function') {
                     return;
                 }
                 localStorage.setItem(ATTEMPTS_KEY, String(attempts));
-                console.log('SpotiwebJS: flip did not stick yet, retrying (' + attempts + '/' + MAX_ATTEMPTS + ')');
+                dbg('forceEnglishAccountSetting: flip did not stick, retrying', '#desktop.settings.selectLanguage', { attempts, max: MAX_ATTEMPTS });
                 attemptFlip();
             }, { readOnly: true });
         });
@@ -375,7 +469,7 @@ if (typeof GM_registerMenuCommand === 'function') {
             nativeSetter.call(select, 'en');
             select.dispatchEvent(new Event('change', { bubbles: true }));
 
-            console.log('SpotiwebJS: dispatched English change on language selector');
+            dbg('applyEnglishToLanguageSelect: dispatched change event', '#desktop.settings.selectLanguage', {});
             resolve({ found: true, value: 'en', changed: true });
             return true;
         };
@@ -402,9 +496,11 @@ if (typeof GM_registerMenuCommand === 'function') {
         }
     }
 
-    function run() {
+    function runPremium() {
         const b = document.body;
         if (!b) return;
+
+        dbg('run: DOM scan pass running', 'document', {});
 
         document.querySelectorAll('.encore-text-title-medium, [class*="title-medium"]').forEach(el => {
             if ((el.textContent || '').trim() === 'Premium Individual') {
@@ -450,13 +546,19 @@ if (typeof GM_registerMenuCommand === 'function') {
                 logChange('a, button, [role="button"]', orig, 'DONT JOIN PREMIUM');
                 el.textContent = 'DONT JOIN PREMIUM';
                 el.style.cssText += `background:${PINK}!important;color:#000!important;border:none!important;border-radius:20px!important;font-weight:700!important;pointer-events:none!important;cursor:default!important;`;
-                el.onclick = e => { e.preventDefault(); e.stopPropagation(); };
+                el.onclick = e => {
+                    dbg('spoofed "DONT JOIN PREMIUM" button: clicked', 'a, button, [role="button"] (originally Get/Buy/Join Premium)', { action: 'preventDefault + stopPropagation (click is a no-op)' });
+                    e.preventDefault(); e.stopPropagation();
+                };
             }
             if (/^(explore|view)\s*plans/.test(t)) {
                 logChange('a, button, [role="button"]', orig, 'Manage plan');
                 el.textContent = 'Manage plan';
                 el.style.cssText += `background:transparent!important;color:#fff!important;border:1px solid #727272!important;border-radius:20px!important;font-weight:700!important;pointer-events:none!important;cursor:default!important;`;
-                el.onclick = e => { e.preventDefault(); e.stopPropagation(); };
+                el.onclick = e => {
+                    dbg('spoofed "Manage plan" button: clicked', 'a, button, [role="button"] (originally Explore/View plans)', { action: 'preventDefault + stopPropagation (click is a no-op)' });
+                    e.preventDefault(); e.stopPropagation();
+                };
             }
             if (/^try/.test(t) && !el.dataset.spDone) {
                 logChange('a, button, [role="button"]', orig, '(hidden)');
@@ -561,6 +663,9 @@ if (typeof GM_registerMenuCommand === 'function') {
             left.appendChild(leftText);
             left.onclick = e => {
                 e.stopPropagation();
+                dbg('premiumBanner left (Edit profile): clicked', '.__sp custom div (replaces [data-testid="compact-banner"])', {
+                    action: 'redirecting to https://www.spotify.com/us/account/profile/'
+                });
                 window.location.href = 'https://www.spotify.com/us/account/profile/';
             };
 
@@ -581,6 +686,9 @@ if (typeof GM_registerMenuCommand === 'function') {
             right.appendChild(rightText);
             right.onclick = e => {
                 e.stopPropagation();
+                dbg('premiumBanner right (Payment method): clicked', '.__sp custom div (replaces [data-testid="compact-banner"])', {
+                    action: 'redirecting to https://www.spotify.com/us/account/saved-payment-cards/'
+                });
                 window.location.href = 'https://www.spotify.com/us/account/saved-payment-cards/';
             };
 
@@ -618,7 +726,12 @@ if (typeof GM_registerMenuCommand === 'function') {
             main.innerHTML = '';
             main.appendChild(wrapper);
             document.querySelectorAll('form, button[type="submit"], [data-testid*="pay"], [data-testid*="checkout"]').forEach(el => {
-                el.onclick = e => { e.preventDefault(); e.stopPropagation(); };
+                el.onclick = e => {
+                    dbg('payments page blocker: clicked', 'form, button[type="submit"], [data-testid*="pay"], [data-testid*="checkout"]', {
+                        'element tag': el.tagName, action: 'preventDefault + stopPropagation (click is a no-op)'
+                    });
+                    e.preventDefault(); e.stopPropagation();
+                };
             });
         }
     }
@@ -632,7 +745,7 @@ if (typeof GM_registerMenuCommand === 'function') {
         if (!premiumSpoofEnabledHere()) return;
         if (changedRoot) scanText(changedRoot);
         else scanText(document.body);
-        run();
+        runPremium();
     }
 
     setTimeout(() => premiumPass(document.body), 300);
@@ -656,6 +769,7 @@ if (typeof GM_registerMenuCommand === 'function') {
         }
         clearTimeout(timer);
         timer = setTimeout(() => {
+            dbg('handleMutations: debounced scan running', 'MutationObserver(document.body)', { pendingNodes: pendingNodes.size, pendingTextNodes: pendingTextNodes.size });
             if (pendingNodes.size > 0 && pendingNodes.size <= 20) {
                 pendingNodes.forEach(node => scanText(node));
             } else if (pendingNodes.size > 20) {
@@ -664,7 +778,7 @@ if (typeof GM_registerMenuCommand === 'function') {
             pendingNodes.clear();
             pendingTextNodes.forEach(node => applyReplacements(node));
             pendingTextNodes.clear();
-            run();
+            runPremium();
         }, 400);
     }
 
@@ -676,6 +790,7 @@ if (typeof GM_registerMenuCommand === 'function') {
             subtree: true,
             characterData: true,
         });
+        dbg('startObserver: MutationObserver (re)started', 'document.body', { childList: true, subtree: true, characterData: true });
     }
 
     startObserver();
@@ -686,30 +801,46 @@ if (typeof GM_registerMenuCommand === 'function') {
             alert('Current text replacements have been logged to the console. Open DevTools (Press F12 or Right click and Inspect), then select the Logs tab under Console to view it.');
         });
     }
+
+    if (typeof GM_registerMenuCommand === 'function') {
+        GM_registerMenuCommand(
+            (debugLoggingEnabled() ? '✅' : '❌') + ' Debug Logging (console)',
+            () => { setFlag(DEBUG_KEY, !debugLoggingEnabled()); location.reload(); }
+        );
+    }
 })();
 
 
 (function() {
     'use strict';
 
-    const removeElements = selector => {
-        document.querySelectorAll(selector).forEach(el => el.remove());
-    };
-
-    const observer = new MutationObserver(() => {
-        if (!premiumSpoofEnabledHere()) return;
-        removeElements('[data-testid="ad-slot-container"], [class*="ad-"]');
-        removeElements('.ButtonInner-sc-14ud5tc-0.fcsOIN');
-    });
-
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-    });
-
-    window.addEventListener('beforeunload', () => {
-        observer.disconnect();
-    });
+    // Real DOM removal of ad-banner containers on the free/ad-supported tier -
+    // this is ordinary ad-block behavior (comparable to a standard ad-blocker
+    // filter rule), not a premium-entitlement bypass: it can't touch anything
+    // server-enforced like bitrate, offline downloads, or skip limits.
+    // Scoped to open.spotify.com (where the web player's ad slots actually
+    // render) and gated by the same open.spotify.com toggle as the rest of
+    // the spoof, since it ships bundled with it in the source. Ported from
+    // Spotifuck v6.9: previously this ran unconditionally on every matched
+    // host (open/www/payments) and relied only on the runtime
+    // premiumSpoofEnabledHere() check to no-op elsewhere, which still meant
+    // a live MutationObserver and repeated no-op queries on www/payments
+    // pages where these ad selectors can never match anything.
+    if (HOST_IS_OPEN) {
+        const removeAdElements = () => {
+            if (!premiumSpoofEnabledHere()) return;
+            const adSlots = document.querySelectorAll('[data-testid="ad-slot-container"], [class*="ad-"]');
+            const adButtons = document.querySelectorAll('.ButtonInner-sc-14ud5tc-0.fcsOIN');
+            if (adSlots.length || adButtons.length) {
+                dbg('removeAdElements: ad elements removed', '[data-testid="ad-slot-container"], [class*="ad-"], .ButtonInner-sc-14ud5tc-0.fcsOIN', { adSlots: adSlots.length, adButtons: adButtons.length });
+            }
+            adSlots.forEach(el => el.remove());
+            adButtons.forEach(el => el.remove());
+        };
+        const adObserver = new MutationObserver(removeAdElements);
+        adObserver.observe(document.body, { childList: true, subtree: true });
+        window.addEventListener('beforeunload', () => adObserver.disconnect());
+    }
 })();
 
 if (HOST_IS_OPEN) {
@@ -748,13 +879,24 @@ if (HOST_IS_OPEN) {
     }
 
     window.closeNowPlay = function(source = 'unknown') {
-        userOpenedNPV = false;
+        userOpenedNPV = false; // NPV guard: any close (any source) disarms the "user opened it" flag
         const panelContainer = document.querySelector('#Desktop_PanelContainer_Id');
-        if (!panelContainer) return;
+        if (!panelContainer) {
+            dbg('closeNowPlay: no-op - #Desktop_PanelContainer_Id not found', '#Desktop_PanelContainer_Id', { source });
+            return;
+        }
         const ariaHidden = panelContainer.parentNode.parentNode.ariaHidden;
         if (ariaHidden === 'false') {
             const toggleBtn = panelContainer.parentNode.parentNode.nextElementSibling?.querySelector('button');
+            dbg('closeNowPlay: view manipulated', '#Desktop_PanelContainer_Id parent parent nextElementSibling button', {
+                source,
+                'panel ariaHidden (before)': ariaHidden,
+                action: toggleBtn ? 'clicked the toggle button to close the panel' : 'toggle button NOT FOUND - could not close',
+                'toggleBtn aria-label': toggleBtn ? toggleBtn.getAttribute('aria-label') : null
+            });
             if (toggleBtn) toggleBtn.click();
+        } else {
+            dbg('closeNowPlay: no-op - panel already hidden', '#Desktop_PanelContainer_Id', { source, ariaHidden });
         }
     };
 
@@ -772,11 +914,15 @@ if (HOST_IS_OPEN) {
     function clickNP(source = 'npBtn-click') {
         const panelContainer = document.querySelector('#Desktop_PanelContainer_Id');
         const toggleBtn = panelContainer?.parentNode.parentNode.nextElementSibling?.querySelector('button');
-        if (!toggleBtn) return;
+        if (!toggleBtn) {
+            dbg('clickNP: no-op - toggle button not found', '#Desktop_PanelContainer_Id parent parent nextElementSibling button', { source });
+            return;
+        }
         const willOpen = !isNpvOpen();
         userOpenedNPV = willOpen; // set BEFORE the click - npvGuardObserver's mutation
         // microtask fires before a setTimeout(0) macrotask would, so this has to be set
         // first or the guard sees the open with the flag still false and undoes it.
+        dbg('clickNP: clicking toggle', '#Desktop_PanelContainer_Id parent parent nextElementSibling button', { source, willOpen });
         toggleBtn.click();
     }
 
@@ -786,6 +932,10 @@ if (HOST_IS_OPEN) {
     // one of those two paths.
     const npvGuardObserver = new MutationObserver(() => {
         if (isNpvOpen() && !userOpenedNPV && !otherPanelOpening) {
+            const panelContainer = document.querySelector('#Desktop_PanelContainer_Id');
+            dbg('NPV guard: panel opened without npBtn click - closing', '#Desktop_PanelContainer_Id', {
+                'panelContainer aria-label': panelContainer?.getAttribute('aria-label') ?? null
+            });
             window.closeNowPlay('npv-guard-autoclose');
         }
         updateNpvLayoutState();
@@ -821,19 +971,36 @@ if (HOST_IS_OPEN) {
         // Make sure NPV starts closed - at this point only npBtn is wired as an
         // authorized opener (setupNpvWidgetTrigger runs separately).
         if (isNpvOpen() && !userOpenedNPV) window.closeNowPlay('npv-guard-init');
+
+        dbg('setupNpvButton: button inserted', 'button[data-testid="lyrics-button"]', {});
     };
 
     // The player-bar album art (div[data-testid=now-playing-widget]>div:first-child)
-    // natively opens the Now Playing view on click - a real, reliable Spotify
-    // affordance. A capture-phase listener sets userOpenedNPV=true the instant the
-    // click lands, strictly before Spotify's own bubble-phase handler runs, so by the
-    // time npvGuardObserver's mutation microtask fires, userOpenedNPV is already true
-    // and the guard leaves it alone.
+    // natively TOGGLES the Now Playing view on click - a real, reliable Spotify
+    // affordance. A capture-phase listener sets userOpenedNPV to match what this click
+    // is about to do - open or close, computed from isNpvOpen() same as clickNP() -
+    // strictly before Spotify's own bubble-phase handler runs, so by the time
+    // npvGuardObserver's mutation microtask fires, userOpenedNPV already reflects the
+    // correct state. This must mirror both directions (not just set true): since it's a
+    // native toggle, the closing click never goes through our closeNowPlay() (which is
+    // the only other place that resets the flag), so an unconditional `true` here would
+    // leave the flag stuck true after a close and cause the guard to wrongly trust the
+    // next unrelated native open (e.g. a playlist's play button auto-opening NPV).
     const setupNpvWidgetTrigger = () => {
         const artEl = document.querySelector('div[data-testid="now-playing-widget"]>div:first-child:not(.fuckd-npv-art)');
         if (!artEl) return;
         artEl.classList.add('fuckd-npv-art');
-        artEl.addEventListener('click', () => { userOpenedNPV = true; }, { capture: true });
+        artEl.addEventListener('click', () => {
+            const willOpen = !isNpvOpen();
+            userOpenedNPV = willOpen;
+            dbg('npvWidget: album art clicked', 'div[data-testid="now-playing-widget"]>div:first-child', {
+                willOpen,
+                note: willOpen
+                    ? 'userOpenedNPV set true before Spotify\'s own click handling runs, so npvGuardObserver allows this open'
+                    : 'panel was open - this click closes it natively (closeNowPlay() never runs for this path), so userOpenedNPV reset to false here to keep guard state in sync'
+            });
+        }, { capture: true });
+        dbg('setupNpvWidgetTrigger: listener attached', 'div[data-testid="now-playing-widget"]>div:first-child', {});
     };
 
     // Same authorized-opener trick as setupNpvWidgetTrigger above, but for Queue and
@@ -845,12 +1012,18 @@ if (HOST_IS_OPEN) {
         const queueBtn = document.querySelector('button[data-testid="control-button-queue"]:not(.fuckd-other-panel)');
         if (queueBtn) {
             queueBtn.classList.add('fuckd-other-panel');
-            queueBtn.addEventListener('click', () => { markOtherPanelOpening(); }, { capture: true });
+            queueBtn.addEventListener('click', () => {
+                markOtherPanelOpening();
+                dbg('otherPanel: Queue button clicked', 'button[data-testid="control-button-queue"]', {});
+            }, { capture: true });
         }
         const connectBtn = document.querySelector('button[aria-label="Connect to a device"]:not(.fuckd-other-panel)');
         if (connectBtn) {
             connectBtn.classList.add('fuckd-other-panel');
-            connectBtn.addEventListener('click', () => { markOtherPanelOpening(); }, { capture: true });
+            connectBtn.addEventListener('click', () => {
+                markOtherPanelOpening();
+                dbg('otherPanel: Connect button clicked', 'button[aria-label="Connect to a device"]', {});
+            }, { capture: true });
         }
     };
 
