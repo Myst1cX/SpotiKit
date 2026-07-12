@@ -71,7 +71,19 @@
 // and retries a capped number of times if it didn't.
 
 // Fifth big change:
-// add changelog
+// Replaced the NPV block ported from spotify-web-lyrics-plus (zero-width
+// collapse of `.zjCIcN96KsMfWwRo`) with Spotifuck's real guard system,
+// ported 1:1: clickNP()/closeNowPlay()/isNpvOpen()/npvGuardObserver, plus
+// our own npBtn (next to the lyrics button) and an album-art click listener.
+// NPV now opens/closes for real via the native toggle instead of staying
+// squashed - only npBtn/album-art clicks are authorized opens, anything
+// else gets auto-closed.
+// Also swapped the direct `.wJiY1vDfuci2a4db` hide (unreliable here) for
+// Spotifuck's actual method - forcing #main-view/--panel-gap/100vw, which
+// crops the native toggle off-screen as a side effect - turns out that CSS
+// does relate to the toggle staying hidden after all, just indirectly.
+// Scoped it behind `html:not(.npv-open)` (unlike spotifuck's unconditional
+// version) so it doesn't squash NPV's own panel while legitimately open.
 
 // --- Per-site visual premium spoof toggles ---
 // Declared at module scope (not inside either IIFE below) because both the
