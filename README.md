@@ -64,7 +64,7 @@ Two scripts, pick one:
 > The original dev has resumed work since. Get SpotiKitUI, the updated version, [here](https://github.com/kitbodega/SpotiKit/blob/main/SpotiKitUI.js).    
 > SpotiKitUI focused on the mobile-like enhancement aspect. Other features (ad-slot cleanup and visual premium spoof, with which also came the logging of replaced text nodes and a forced english locale spoof are no longer present there).   
 
-> You may also consider my own mobile script: [Spotifuck Userscript](https://github.com/Myst1cX/spotifuck-userscript/blob/main/spotifuck-v6.user.js).    
+> You may also consider my own mobile script: [Spotifuck Userscript](https://github.com/Myst1cX/spotifuck-userscript/blob/main/spotifuck-mobile.user.js).    
 > Check out [Spotifuck's README & Installation Guide](https://github.com/Myst1cX/spotifuck-userscript/blob/main/README.md).   
 
 * * *
@@ -76,7 +76,7 @@ Two scripts, pick one:
 > a) SpotiwebJS (Desktop, visual premium spoof only): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.js)     
 > b) SpotiKitMobileDesktop (my 7.31.fork, mobile-like layout + visual premium spoof): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)     
 > c) SpotiKitUI (the successor of SpotiKitMobileDesktop, focus only on mobile-like layout enhancement): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
-> d) Spotifuck Userscript (mobile-like layout + visual premium spoof): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-v6.user.js)     
+> d) Spotifuck Userscript (mobile-like layout + visual premium spoof): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
 > 4. Go to [open.spotify.com](https://open.spotify.com) and reload the page.  
 > 5. On mobile, you will require a few more steps - tricking the browser with a User Agent:   
 > 6. Install [Chameleon](https://addons.mozilla.org/en-US/android/addon/chameleon-ext/) extension    
