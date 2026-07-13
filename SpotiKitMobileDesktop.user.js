@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SpotiKitMobileDesktop
+// @name         SpotiKitMobileDesktop - no more updates
 // @namespace    https://github.com/Myst1cX/SpotiKit
 // @version      7.3.1.fork
 // @description  SpotiKit — Mobile‑like layout for Spotify Web. Floating player, bottom nav, library overlay, and more.
@@ -22,6 +22,9 @@
 // @updateURL    https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js
 // ==/UserScript==
+
+// THIS WAS THE INITIAL FORK. THERE WILL BE NO MORE UPDATES.
+// USE: https://github.com/Myst1cX/spotifuck-userscript/raw/refs/heads/main/spotifuck-mobile.user.js
 
 // RESOLVED (7.3.1.fork, Myst1cX)
 
