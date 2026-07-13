@@ -7,9 +7,11 @@ Two scripts, pick one:
 
 > **SpotiwebJS**: premium spoof + ad-slot removal only. No layout changes. Use this if you want Spotify's normal desktop UI left alone.
 >
-> **SpotiKitMobileDesktop**: everything SpotiwebJS does, plus a full mobile-like layout on open.spotify.com (floating player, bottom nav, library-as-overlay). Already includes the desktop script's features, so don't install both.    
-> **NOTE**: An updated version of the mobile script (now called SpotiKitUI) can be found [here](https://github.com/kitbodega/SpotiKit/blob/main/SpotiKitUI.js) - the original dev has resumed work.   
-> SpotiKitUI focused on the mobile-like enhancement aspect. Other features (ad-slot cleanup and visual premium spoof, with which also came the logging of replaced text nodes and a forced english locale spoof are no longer present there).   
+> **SpotiKitMobileDesktop**: everything SpotiwebJS does, plus a full mobile-like layout on open.spotify.com (floating player, bottom nav, library-as-overlay). Already includes the desktop script's features, so don't install both.
+> **NOTE**: An updated version of the mobile script (Spotifuck Mobile) can be found [here](https://github.com/Myst1cX/spotifuck-userscript/raw/main/spotifuck-mobile.user.js) - fixed the library bugs, restored the Now Playing View toggle.   
+> Spotifuck Mobile takes in all of SpotiKitDesktopMobile. Ad-slot cleanup and visual premium spoof, with which also came the logging of replaced text nodes and a forced english locale spoof are features that remain in this version. Check out [Spotifuck's README & Installation Guide](https://github.com/Myst1cX/spotifuck-userscript/blob/main/README.md).    
+> **NOTE**: The original dev of the SpotiKitMobileScript script (now called SpotiKitUI) has resumed work. Their updates can be found [here](https://github.com/kitbodega/SpotiKit/blob/main/SpotiKitUI.js) - they will likely merge the library bug fixes and the Now Playing View. Watch out for new updates!    
+> SpotiKitUI focuses on the mobile-like enhancement aspect. Other features (ad-slot cleanup and visual premium spoof, with which also came the logging of replaced text nodes and a forced english locale spoof are no longer present there).   
 
 ## Features
 
@@ -60,12 +62,11 @@ Two scripts, pick one:
 
 * * *
 
-> **NOTE:** This is an experimental build. There may be bugs with the library view.    
-> The original dev has resumed work since. Get SpotiKitUI, the updated version, [here](https://github.com/kitbodega/SpotiKit/blob/main/SpotiKitUI.js).    
-> SpotiKitUI focused on the mobile-like enhancement aspect. Other features (ad-slot cleanup and visual premium spoof, with which also came the logging of replaced text nodes and a forced english locale spoof are no longer present there).   
-
-> You may also consider my own mobile script: [Spotifuck Userscript](https://github.com/Myst1cX/spotifuck-userscript/blob/main/spotifuck-mobile.user.js).    
-> Check out [Spotifuck's README & Installation Guide](https://github.com/Myst1cX/spotifuck-userscript/blob/main/README.md).   
+> **NOTE:** This is an experimental build. There may be bugs with the library view. Now Playing View feature is missing.   
+> **NOTE**: An updated version of the mobile script (Spotifuck Mobile) can be found [here](https://github.com/Myst1cX/spotifuck-userscript/raw/main/spotifuck-mobile.user.js) - fixed the library bugs, restored the Now Playing View toggle.   
+> Spotifuck Mobile takes in all of SpotiKitDesktopMobile. Ad-slot cleanup and visual premium spoof, with which also came the logging of replaced text nodes and a forced english locale spoof are features that remain in this version. Check out [Spotifuck's README & Installation Guide](https://github.com/Myst1cX/spotifuck-userscript/blob/main/README.md).    
+> **NOTE**: The original dev of the SpotiKitMobileScript script (now called SpotiKitUI) has resumed work. Their updates can be found [here](https://github.com/kitbodega/SpotiKit/blob/main/SpotiKitUI.js) - they will likely merge the library bug fixes and the Now Playing View. Watch out for new updates!    
+> SpotiKitUI focuses on the mobile-like enhancement aspect. Other features (ad-slot cleanup and visual premium spoof, with which also came the logging of replaced text nodes and a forced english locale spoof are no longer present there).    
 
 * * *
 
