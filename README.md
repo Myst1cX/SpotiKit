@@ -5,7 +5,7 @@
 
 Two scripts, pick one:
 
-> **SpotiwebJS**: premium spoof + ad-slot removal only. No desktop UI layout changes except for the restoration of the Now Playing View.   
+> **SpotiwebJS**: premium spoof + ad-slot removal only. No desktop UI layout changes except for the restoration of the old Now Playing View button.   
 >
 > **SpotiKitMobileDesktop**: everything SpotiwebJS does, plus a full mobile-like layout on open.spotify.com (floating player, bottom nav, library-as-overlay). Already includes the desktop script's features, so don't install both.
 > **NOTE**: An updated version of the mobile script (Spotifuck Mobile) can be found [here](https://github.com/Myst1cX/spotifuck-userscript/raw/main/spotifuck-mobile.user.js) - fixed the library bugs, restored the Now Playing View toggle.   
