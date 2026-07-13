@@ -72,7 +72,7 @@ Two scripts, pick one:
 * * *
 
 ## Installation
-a) DESKTOP:
+a) DESKTOP INSTALLATION:
 > 1. Install [Violentmonkey](https://violentmonkey.github.io/)  
 > 2. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)  
 > 3. Alternative to Ublock Origin for blocking Spotify ads: [uSpot - Spotify Ad Blocker](https://github.com/Myst1cX/uSpot/releases). Click [here](https://github.com/Myst1cX/uSpot/blob/main/README.md) for installation steps.   
@@ -81,7 +81,7 @@ a) DESKTOP:
 > 6. Optional: [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Click [here](https://github.com/Myst1cX/spotify-web-lyrics-plus/blob/main/README.md) for the setup and feature list.    
 > 7. Open [Spotify Web Player](https://open.spotify.com/)
 
-b) MOBILE: 
+b) MOBILE INSTALLATION: 
 > NEW 'QUETTA BROWSER + USER-AGENT SWITCHER AND MANAGER' METHOD:    
 > Credits to: [u/soujunim/](https://www.reddit.com/r/SpotifyLatestModAPK/comments/1upaed1/mobile_browser_spotifuck_ui_and_adblock/)
 > 
