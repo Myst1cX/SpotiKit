@@ -18,8 +18,8 @@
 // @run-at       document-idle
 // @homepageURL  https://github.com/Myst1cX/SpotiKit
 // @supportURL   https://github.com/Myst1cX/SpotiKit/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiWebJS-archived.user.js.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiWebJS-archived.user.js.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiWebJS-archived.user.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiWebJS-archived.user.js
 // ==/UserScript==
 
 // THIS WAS THE INITIAL FORK. THERE WILL BE NO MORE UPDATES.
