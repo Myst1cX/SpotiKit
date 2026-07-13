@@ -87,20 +87,22 @@ b) MOBILE INSTALLATION:
 > 
 > 1. Download and install the Quetta Browser.    
 > 2. Quetta Browser > Open Spotify Web and login to your account   
-> 3. Press on the three dots next to the search bar's tab counter.   
-> 4. Click on the Extensions tab > Manage Extensions > Search Extensions and get the following: 'Violentmonkey', 'User-Agent Switcher and Manager', 'Spotify Ad-Blocker (Blockify)'   
-> 5. Backup ad-blocking extension: [uSpot - Spotify Ad Blocker](https://github.com/Myst1cX/uSpot/releases)    
+> 3. Press on the three dots next to the search bar's tab counter.
+> 4. Go to Settings > Appearance > Disable 'Enhance Dark Theme'. Now exit the Settings.
+> 5. Once again press on the three dots next to the search bar's tab counter.   
+> 6. Click on the Extensions tab > Manage Extensions > Search Extensions and get the following: 'Violentmonkey', 'User-Agent Switcher and Manager', 'Spotify Ad-Blocker (Blockify)'   
+> 7. Backup ad-blocking extension: [uSpot - Spotify Ad Blocker](https://github.com/Myst1cX/uSpot/releases)    
 > Click [here](https://github.com/Myst1cX/uSpot/blob/main/README.md) for installation steps.   
-> 6. NOTE: Keep only 1 ad-blocking extension enabled at the same time.    
-> 7. Optional - for a lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator - broken, may fork shortly](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)   
-> 8. Optional: [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Click [here](https://github.com/Myst1cX/spotify-web-lyrics-plus/blob/main/README.md) for the setup and feature list.   
-> 9. Install your preferred mobile layout script:   
+> 8. NOTE: Keep only 1 ad-blocking extension enabled at the same time.    
+> 9. Optional - for a lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator - broken, may fork shortly](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)   
+> 10. Optional: [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Click [here](https://github.com/Myst1cX/spotify-web-lyrics-plus/blob/main/README.md) for the setup and feature list.   
+> 11. Install your preferred mobile layout script:   
 > a) Spotifuck Mobile (stable. mobile-like layout + visual premium spoof. no library bugs. NowPlayingView button returns.): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
 > b) SpotiKitUI (only has the mobile-like layout enhancement. no spoofs. beta, may have unresolved bugs): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
 > c) SpotiKitMobileDesktop (my old 7.31.fork of SpotiKitUI. with library bugs, no NowPlayingView button. no longer updated.): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)    
-> 10. Open the Spotify web player > Press on the three dots next to the search bar's tab counter > Click on the Extensions tab > Click on the 'User-Agent Switcher and Manager' extension icon > Select the first option (a Chrome Windows 10 user agent) > Click 'Apply (this tab' and then 'Refresh Tab'.   
-> 11. Spotify web player should reload. The interface should now be mobile-friendly.   
-> 12. NOTE: Keep Desktop Mode (browser setting) disabled.    
+> 12. Open the Spotify web player > Press on the three dots next to the search bar's tab counter > Click on the Extensions tab > Click on the 'User-Agent Switcher and Manager' extension icon > Select the first option (a Chrome Windows 10 user agent) > Click 'Apply (this tab' and then 'Refresh Tab'.   
+> 13. Spotify web player should reload. The interface should now be mobile-friendly.   
+> 14. NOTE: Keep Desktop Mode (browser setting) disabled.    
 
 * * * 
 
