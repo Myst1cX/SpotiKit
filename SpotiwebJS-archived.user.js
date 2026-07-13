@@ -22,6 +22,9 @@
 // @downloadURL  https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiWebJS-archived.user.js.js
 // ==/UserScript==
 
+// THIS WAS THE INITIAL FORK. THERE WILL BE NO MORE UPDATES.
+// USE: https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiWebJS.user.js
+
 // RESOLVED (7.0.fork, Myst1cX):
 
 // First change:
