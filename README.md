@@ -96,7 +96,7 @@ b) MOBILE INSTALLATION:
 > 8. Optional: [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Click [here](https://github.com/Myst1cX/spotify-web-lyrics-plus/blob/main/README.md) for the setup and feature list.   
 > 9. Install your preferred mobile layout script:   
 > a) Spotifuck Mobile (stable. mobile-like layout + visual premium spoof. no library bugs. NowPlayingView button returns.): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
-> b) SpotiKitUI (only has the mobile-like layout enhancement. no spoofs. beta, may have unresolved bugs): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)
+> b) SpotiKitUI (only has the mobile-like layout enhancement. no spoofs. beta, may have unresolved bugs): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
 > c) SpotiKitMobileDesktop (my old 7.31.fork of SpotiKitUI. with library bugs, no NowPlayingView button. no longer updated.): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)    
 > 10. Open the Spotify web player > Press on the three dots next to the search bar's tab counter > Click on the Extensions tab > Click on the 'User-Agent Switcher and Manager' extension icon > Select the first option (a Chrome Windows 10 user agent) > Click 'Apply (this tab' and then 'Refresh Tab'.   
 > 11. Spotify web player should reload. The interface should now be mobile-friendly.   
@@ -113,7 +113,7 @@ b) MOBILE INSTALLATION:
 > 6. Optional: [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Click [here](https://github.com/Myst1cX/spotify-web-lyrics-plus/blob/main/README.md) for the setup and feature list.    
 > 7. Install your preferred mobile layout script:
 > a) Spotifuck Mobile (stable. mobile-like layout + visual premium spoof. no library bugs. NowPlayingView button returns.): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
-> b) SpotiKitUI (only has the mobile-like layout enhancement. no spoofs. beta, may have unresolved bugs): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)
+> b) SpotiKitUI (only has the mobile-like layout enhancement. no spoofs. beta, may have unresolved bugs): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
 > c) SpotiKitMobileDesktop (my old 7.31.fork of SpotiKitUI. with library bugs, no NowPlayingView button. no longer updated.): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)    
 > 8. Install [Chameleon](https://addons.mozilla.org/en-US/android/addon/chameleon-ext/) extension   
 > 9. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop)  
