@@ -40,6 +40,7 @@ Two scripts, pick one:
 > Matches `open.spotify.com`, `www.spotify.com`'s account/premium/duo/student/family pages and `payments.spotify.com` (plan payment blockers/redirects),   
 > Premium/duo/student/family pages get replaced outright with a "you don't need Premium" message and a link home.  
 > Payments page gets replaced with a "don't waste your money" message; checkout/payment buttons are disabled.
+> Restoration of the old Now Playing View button.   
 
 ### SpotiKitMobileDesktop 
 
