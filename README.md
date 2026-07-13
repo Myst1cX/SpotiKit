@@ -5,13 +5,13 @@
 
 Two scripts, pick one:
 
-> **SpotiwebJS**: premium spoof + ad-slot removal only. Forced english locale spoof. No desktop UI layout changes except for the restoration of the old Now Playing View button.   
+> **SpotiwebJS**: Premium spoof + ad-slot removal only. Forced English locale spoof. No desktop UI layout changes except for the restoration of the old Now Playing View button.   
 >
-> **SpotiKitMobileDesktop**: everything SpotiwebJS does, plus a full mobile-like layout on open.spotify.com (floating player, bottom nav, library-as-overlay). Already includes the desktop script's features, so don't install both.
-> **NOTE**: An updated version of the mobile script (Spotifuck Mobile) can be found [here](https://github.com/Myst1cX/spotifuck-userscript) - fixed the library bugs, restored the Now Playing View toggle.   
-> **Spotifuck Mobile**: takes in all of SpotiKitDesktopMobile. Ad-slot cleanup and visual premium spoof, with which also came the logging of replaced text nodes and a forced english locale spoof are features that remain in this version. Check out [Spotifuck's Installation Guide](https://github.com/Myst1cX/spotifuck-userscript/blob/main/README.md).    
-> **NOTE**: The original dev of the SpotiKitMobileScript script (now called SpotiKitUI) has resumed work. Their updates can be found [here](https://github.com/kitbodega/SpotiKit) - they will likely merge the library bug fixes and the Now Playing View. Watch out for new updates!    
-> SpotiKitUI focuses on the mobile-like enhancement aspect. Other features (ad-slot cleanup and visual premium spoof, with which also came the logging of replaced text nodes and a forced english locale spoof are no longer present there).   
+> **SpotiKitMobileDesktop**: Mobile version of SpotiwebJS. Adds a full mobile-like layout on open.spotify.com (floating player, bottom nav, library-as-overlay).
+>
+> **NOTE**: **Spotifuck Mobile** is the recommended successor. It includes everything from SpotiKitMobileDesktop, fixes the library bugs, restores the Now Playing View toggle, and keeps the ad-slot cleanup, visual premium spoof, logging of replaced text nodes, and forced English locale spoof. Check out [Spotifuck's Installation and Features Guide](https://github.com/Myst1cX/spotifuck-userscript/blob/main/README.md).
+>
+> **NOTE**: The original author has resumed development of SpotiKitMobileDesktop under **SpotiKitUI**. It focuses on the mobile-like UI only (no premium spoof, ad-slot cleanup, logging, or forced English). Updates can be found [here](https://github.com/kitbodega/SpotiKit).
 
 ## Features
 
@@ -95,9 +95,9 @@ b) MOBILE INSTALLATION:
 > 7. Optional - for a lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator - broken, may fork shortly](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)   
 > 8. Optional: [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Click [here](https://github.com/Myst1cX/spotify-web-lyrics-plus/blob/main/README.md) for the setup and feature list.   
 > 9. Install your preferred mobile layout script:   
-> a) Spotifuck Userscript (stable. mobile-like layout + visual premium spoof. no library bugs. NowPlayingView returns.): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
-> b) SpotiKitMobileDesktop (my old 7.31.fork of SpotiKitUI. with library bugs, no NowPlayingView. end of updates.): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)     
-> c) SpotiKitUI (only has the mobile-like layout enhancement. no spoofs. beta, may have unresolved bugs): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
+> a) Spotifuck Mobile (stable. mobile-like layout + visual premium spoof. no library bugs. NowPlayingView button returns.): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
+> b) SpotiKitUI (only has the mobile-like layout enhancement. no spoofs. beta, may have unresolved bugs): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)
+> c) SpotiKitMobileDesktop (my old 7.31.fork of SpotiKitUI. with library bugs, no NowPlayingView button. no longer updated.): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)    
 > 10. Open the Spotify web player > Press on the three dots next to the search bar's tab counter > Click on the Extensions tab > Click on the 'User-Agent Switcher and Manager' extension icon > Select the first option (a Chrome Windows 10 user agent) > Click 'Apply (this tab' and then 'Refresh Tab'.   
 > 11. Spotify web player should reload. The interface should now be mobile-friendly.   
 > 12. NOTE: Keep Desktop Mode (browser setting) disabled.    
@@ -112,9 +112,9 @@ b) MOBILE INSTALLATION:
 > 5. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
 > 6. Optional: [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Click [here](https://github.com/Myst1cX/spotify-web-lyrics-plus/blob/main/README.md) for the setup and feature list.    
 > 7. Install your preferred mobile layout script:
- a) Spotifuck Userscript (stable. mobile-like layout + visual premium spoof. no library bugs. NowPlayingView returns.): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
-> b) SpotiKitMobileDesktop (my old 7.31.fork of SpotiKitUI. with library bugs, no NowPlayingView. end of updates.): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)     
-> c) SpotiKitUI (only has the mobile-like layout enhancement. no spoofs. beta, may have unresolved bugs): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
+> a) Spotifuck Mobile (stable. mobile-like layout + visual premium spoof. no library bugs. NowPlayingView button returns.): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
+> b) SpotiKitUI (only has the mobile-like layout enhancement. no spoofs. beta, may have unresolved bugs): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)
+> c) SpotiKitMobileDesktop (my old 7.31.fork of SpotiKitUI. with library bugs, no NowPlayingView button. no longer updated.): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)    
 > 8. Install [Chameleon](https://addons.mozilla.org/en-US/android/addon/chameleon-ext/) extension   
 > 9. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop)  
 > 10. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option  
