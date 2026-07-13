@@ -18,8 +18,8 @@
 // @run-at       document-start
 // @homepageURL  https://github.com/Myst1cX/SpotiKit
 // @supportURL   https://github.com/Myst1cX/SpotiKit/issues
-// @updateURL    https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.js
-// @downloadURL  https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.js
+// @updateURL    https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.user.js
+// @downloadURL  https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.user.js
 // ==/UserScript==
 
 // RESOLVED (7.0.fork, Myst1cX):
