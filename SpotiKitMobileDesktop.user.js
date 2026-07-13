@@ -24,7 +24,7 @@
 // ==/UserScript==
 
 // THIS WAS THE INITIAL FORK. THERE WILL BE NO MORE UPDATES.
-// USE: https://github.com/Myst1cX/spotifuck-userscript/raw/refs/heads/main/spotifuck-mobile.user.js
+// USE: https://github.com/Myst1cX/spotifuck-userscript/raw/main/spotifuck-mobile.user.js
 
 // RESOLVED (7.3.1.fork, Myst1cX)
 
