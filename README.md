@@ -94,10 +94,10 @@ b) MOBILE INSTALLATION:
 > 6. NOTE: Keep only 1 ad-blocking extension enabled at the same time.    
 > 7. Optional - for a lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator - broken, may fork shortly](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)   
 > 8. Optional: [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Click [here](https://github.com/Myst1cX/spotify-web-lyrics-plus/blob/main/README.md) for the setup and feature list.   
-> 9. Install your preferred mobile layout script:
-> a) Spotifuck Userscript (best choice): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
-> b) SpotiKitMobileDesktop (my 7.31.fork of SpotiKitUI, mobile-like layout + visual premium spoof): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)     
-> c) SpotiKitUI (the successor of SpotiKitMobileDesktop, focus only on mobile-like layout enhancement): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
+> 9. Install your preferred mobile layout script:   
+> a) Spotifuck Userscript (stable. mobile-like layout + visual premium spoof. no library bugs. NowPlayingView returns.): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
+> b) SpotiKitMobileDesktop (my old 7.31.fork of SpotiKitUI. with library bugs, no NowPlayingView. end of updates.): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)     
+> c) SpotiKitUI (only has the mobile-like layout enhancement. no spoofs. beta, may have unresolved bugs): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
 > 10. Open the Spotify web player > Press on the three dots next to the search bar's tab counter > Click on the Extensions tab > Click on the 'User-Agent Switcher and Manager' extension icon > Select the first option (a Chrome Windows 10 user agent) > Click 'Apply (this tab' and then 'Refresh Tab'.   
 > 11. Spotify web player should reload. The interface should now be mobile-friendly.   
 > 12. NOTE: Keep Desktop Mode (browser setting) disabled.    
@@ -112,9 +112,9 @@ b) MOBILE INSTALLATION:
 > 5. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
 > 6. Optional: [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Click [here](https://github.com/Myst1cX/spotify-web-lyrics-plus/blob/main/README.md) for the setup and feature list.    
 > 7. Install your preferred mobile layout script:
-> a) Spotifuck Userscript (best choice): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
-> b) SpotiKitMobileDesktop (my 7.31.fork of SpotiKitUI, mobile-like layout + visual premium spoof): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)     
-> c) SpotiKitUI (the successor of SpotiKitMobileDesktop, focus only on mobile-like layout enhancement): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
+ a) Spotifuck Userscript (stable. mobile-like layout + visual premium spoof. no library bugs. NowPlayingView returns.): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
+> b) SpotiKitMobileDesktop (my old 7.31.fork of SpotiKitUI. with library bugs, no NowPlayingView. end of updates.): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)     
+> c) SpotiKitUI (only has the mobile-like layout enhancement. no spoofs. beta, may have unresolved bugs): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
 > 8. Install [Chameleon](https://addons.mozilla.org/en-US/android/addon/chameleon-ext/) extension   
 > 9. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop)  
 > 10. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option  
