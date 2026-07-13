@@ -66,7 +66,7 @@ Two scripts, pick one:
 > **NOTE:** This is an experimental build. There may be bugs with the library view. Now Playing View feature is missing.   
 > **NOTE**: An updated version of the mobile script (Spotifuck Mobile) can be found [here](https://github.com/Myst1cX/spotifuck-userscript/raw/main/spotifuck-mobile.user.js) - fixed the library bugs, restored the Now Playing View toggle.   
 > **Spotifuck Mobile**: takes in all of SpotiKitDesktopMobile. Ad-slot cleanup and visual premium spoof, with which also came the logging of replaced text nodes and a forced english locale spoof are features that remain in this version. Check out [Spotifuck's Installation Guide](https://github.com/Myst1cX/spotifuck-userscript/blob/main/README.md).    
-> **NOTE**: The original dev of the SpotiKitMobileScript script (now called SpotiKitUI) has resumed work. Their updates can be found [here](https://github.com/kitbodega/SpotiKit/blob/main/SpotiKitUI.js) - they will likely merge the library bug fixes and the Now Playing View. Watch out for new updates!    
+> **NOTE**: The original dev of the SpotiKitMobileScript script (now called SpotiKitUI) has resumed work. Their updates can be found [here](https://github.com/kitbodega/SpotiKit/blob/main/SpotiKitUI.user.js) - they will likely merge the library bug fixes and the Now Playing View. Watch out for new updates!    
 > SpotiKitUI focuses on the mobile-like enhancement aspect. Other features (ad-slot cleanup and visual premium spoof, with which also came the logging of replaced text nodes and a forced english locale spoof are no longer present there).    
 
 * * *
@@ -75,7 +75,7 @@ Two scripts, pick one:
  
 > 1. Download a userscript manager (Recommended: [Violentmonkey](https://violentmonkey.github.io/) or [Tampermonkey](https://www.tampermonkey.net/))     
 > 2. Choose the version you need. The raw link below will pop the install dialog for you.   
-> a) SpotiwebJS (Desktop, visual premium spoof only): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.js)     
+> a) SpotiwebJS (Desktop, visual premium spoof only): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.user.js)     
 > b) SpotiKitMobileDesktop (my 7.31.fork, mobile-like layout + visual premium spoof): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)     
 > c) SpotiKitUI (the successor of SpotiKitMobileDesktop, focus only on mobile-like layout enhancement): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
 > d) Spotifuck Userscript (mobile-like layout + visual premium spoof): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
