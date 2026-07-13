@@ -2,7 +2,7 @@
 // @name         SpotiKit++ desktop
 // @namespace    https://github.com/Myst1cX/SpotiKit
 // @version      7.0.latest
-// @description  SpotiKit — visual premium UI overlay for Spotify and ad banner blocking
+// @description  SpotiKit — visual premium UI overlay for Spotify and ad banner blocking. Also restores the old Now Playing View button.
 // @author       kit_fogos, Myst1cX (fork)
 // @match        https://www.spotify.com/*/account/*
 // @match        https://open.spotify.com/*
