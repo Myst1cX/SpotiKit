@@ -72,23 +72,59 @@ Two scripts, pick one:
 * * *
 
 ## Installation
- 
-> 1. Download a userscript manager (Recommended: [Violentmonkey](https://violentmonkey.github.io/) or [Tampermonkey](https://www.tampermonkey.net/))     
-> 2. Choose the version you need. The raw link below will pop the install dialog for you.   
-> a) SpotiwebJS (Desktop, visual premium spoof only): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.user.js)     
-> b) SpotiKitMobileDesktop (my 7.31.fork, mobile-like layout + visual premium spoof): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)     
+a) DESKTOP:
+> 1. Install [Violentmonkey](https://violentmonkey.github.io/)  
+> 2. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)  
+> 3. Alternative to Ublock Origin for blocking Spotify ads: [uSpot - Spotify Ad Blocker](https://github.com/Myst1cX/uSpot/releases). Click [here](https://github.com/Myst1cX/uSpot/blob/main/README.md) for installation steps.   
+> 4. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator - broken, may fork shortly](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
+> 5. Install [SpotiwebJS](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.user.js) (ad-slot removal, visual premium and forced English locale spoof, restoration of the old Now Playing View button)    
+> 6. Optional: [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Click [here](https://github.com/Myst1cX/spotify-web-lyrics-plus/blob/main/README.md) for the setup and feature list.    
+> 7. Open [Spotify Web Player](https://open.spotify.com/)
+
+b) MOBILE: 
+> NEW 'QUETTA BROWSER + USER-AGENT SWITCHER AND MANAGER' METHOD:    
+> Credits to: [u/soujunim/](https://www.reddit.com/r/SpotifyLatestModAPK/comments/1upaed1/mobile_browser_spotifuck_ui_and_adblock/)
+> 
+> 1. Download and install the Quetta Browser.    
+> 2. Quetta Browser > Open Spotify Web and login to your account   
+> 3. Press on the three dots next to the search bar's tab counter.   
+> 4. Click on the Extensions tab > Manage Extensions > Search Extensions and get the following: 'Violentmonkey', 'User-Agent Switcher and Manager', 'Spotify Ad-Blocker (Blockify)'   
+> 5. Backup ad-blocking extension: [uSpot - Spotify Ad Blocker](https://github.com/Myst1cX/uSpot/releases)    
+> Click [here](https://github.com/Myst1cX/uSpot/blob/main/README.md) for installation steps.   
+> 6. NOTE: Keep only 1 ad-blocking extension enabled at the same time.    
+> 7. Optional - for a lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator - broken, may fork shortly](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)   
+> 8. Optional: [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Click [here](https://github.com/Myst1cX/spotify-web-lyrics-plus/blob/main/README.md) for the setup and feature list.   
+> 9. Install your preferred mobile layout script:
+> a) Spotifuck Userscript (best choice): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
+> b) SpotiKitMobileDesktop (my 7.31.fork of SpotiKitUI, mobile-like layout + visual premium spoof): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)     
 > c) SpotiKitUI (the successor of SpotiKitMobileDesktop, focus only on mobile-like layout enhancement): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
-> d) Spotifuck Userscript (mobile-like layout + visual premium spoof): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
-> 4. Go to [open.spotify.com](https://open.spotify.com) and reload the page.  
-> 5. On mobile, you will require a few more steps - tricking the browser with a User Agent:   
-> 6. Install [Chameleon](https://addons.mozilla.org/en-US/android/addon/chameleon-ext/) extension    
-> 7. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop)   
-> 8. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option   
-> 9. Go back to Firefox browser > Firefox Settings > Site settings > Click on "DRM-controlled content" and select "Allowed"   
-> 10. Restart Firefox    
-> 11. Open Spotify Web and login to your account    
-> 12. The interface should be mobile-friendly > If it ever resets, try redoing the Chameleon extension configuration and refreshing the Spotify page   
-> 13. NOTE: Keep Desktop Mode (browser setting) disabled.   
+> 10. Open the Spotify web player > Press on the three dots next to the search bar's tab counter > Click on the Extensions tab > Click on the 'User-Agent Switcher and Manager' extension icon > Select the first option (a Chrome Windows 10 user agent) > Click 'Apply (this tab' and then 'Refresh Tab'.   
+> 11. Spotify web player should reload. The interface should now be mobile-friendly.   
+> 12. NOTE: Keep Desktop Mode (browser setting) disabled.    
+
+* * * 
+
+> LEGACY 'FIREFOX BROWSER + CHAMELEON EXTENSION' METHOD (SLOWER, LESS RESPONSIVE):
+> 1. Download the latest version of Firefox (must be the Original version; Nightly or other releases might break your userscript manager).  
+> 2. Install [Violentmonkey](https://violentmonkey.github.io/)    
+> 3. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)  
+> 4. Alternative to Ublock Origin for blocking Spotify ads: [uSpot - Spotify Ad Blocker](https://github.com/Myst1cX/uSpot/releases). Click [here](https://github.com/Myst1cX/uSpot/blob/main/README.md) for installation steps.   
+> 5. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator](https://greasyfork.org/en/scripts/523415-cigi-spotify-translator)
+> 6. Optional: [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Click [here](https://github.com/Myst1cX/spotify-web-lyrics-plus/blob/main/README.md) for the setup and feature list.    
+> 7. Install your preferred mobile layout script:
+> a) Spotifuck Userscript (best choice): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
+> b) SpotiKitMobileDesktop (my 7.31.fork of SpotiKitUI, mobile-like layout + visual premium spoof): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)     
+> c) SpotiKitUI (the successor of SpotiKitMobileDesktop, focus only on mobile-like layout enhancement): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
+> 8. Install [Chameleon](https://addons.mozilla.org/en-US/android/addon/chameleon-ext/) extension   
+> 9. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop)  
+> 10. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option  
+> 11. Go back to Firefox browser > Firefox Settings > Site settings > Click on "DRM-controlled content" and select "Allowed"  
+> 12. Restart Firefox  
+> 13. Open Spotify Web and login to your account  
+> 14. The interface should be mobile friendly > If it ever resets, try redoing the Chameleon extension configuration and refreshing the Spotify page
+> 15. NOTE: Keep Desktop Mode (browser setting) disabled.
+> 16. Play a song  
+> 17. Click on the Lyrics+ button to open the interface popup and see the song lyrics  
 
 * * *
 
