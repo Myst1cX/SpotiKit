@@ -5,7 +5,7 @@
 
 Two scripts, pick one:
 
-> **SpotiwebJS**: Premium spoof + ad-slot removal only. Forced English locale spoof. No desktop UI layout changes except for the restoration of the old Now Playing View button.   
+> **SpotiwebJS**: Premium spoof + ad-slot removal only. Forced English locale spoof. No desktop UI layout changes except for the restoration of the old Now Playing View button and Amoled mode.   
 >
 > **SpotiKitMobileDesktop**: Mobile version of SpotiwebJS. Adds a full mobile-like layout on open.spotify.com (floating player, bottom nav, library-as-overlay).
 >
@@ -40,9 +40,9 @@ Two scripts, pick one:
 > Matches `open.spotify.com`, `www.spotify.com`'s account/premium/duo/student/family pages and `payments.spotify.com` (plan payment blockers/redirects),   
 > Premium/duo/student/family pages get replaced outright with a "you don't need Premium" message and a link home.  
 > Payments page gets replaced with a "don't waste your money" message; checkout/payment buttons are disabled.   
-> Restoration of the old Now Playing View button.   
+> Restoration of the old Now Playing View button. Amoled mode.     
 
-### SpotiKitMobileDesktop 
+### SpotiKitMobileDesktop - outdated
 
 > Does everything above too (layout changes are restricted to open.spotify.com so they don't leak onto the account pages), plus:
 >
