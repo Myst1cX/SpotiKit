@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SpotiKit desktop ++
+// @name         SpotiKit++ desktop
 // @namespace    https://github.com/Myst1cX/SpotiKit
 // @version      7.0.13
 // @description  SpotiKit - Visual premium UI overlay for Spotify and ad banner blocking. Amoled theme. Restores the old Now Playing View button. 
