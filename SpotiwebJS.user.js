@@ -252,6 +252,21 @@
 //    becomes a real pain point later, the sessionStorage approach above is
 //    the way to do it - not implemented here.
 
+// Tenth change:
+// Corrected a stale/inaccurate claim in the comment above
+// setupNpvButton()/setupNpvWidgetTrigger()/setupOtherPanelTriggers()'s
+// npvSetupInterval poll: it said Spotifuck Mobile's own indefinite pfint
+// polling already gave those two elements equivalent coverage there, so
+// SpotiwebJS needed its own loop only because it runs at document-idle with
+// no equivalent loop in place. Checked Mobile directly - pfint polls
+// indefinitely, but only for the play button; once that's found, ffDone
+// latches true and Mobile's addCSSJSHack() (which wires these three) never
+// runs again, so Mobile was actually only giving them one fixed 2s retry,
+// not indefinite coverage. Comment corrected, and Spotifuck Mobile (v.7.1) has since been
+// given this same indefinite-poll pattern for real (see its own changelog).
+// No code change here - SpotiwebJS's own npvSetupInterval was already
+// correct; only the comment's claim about Mobile was wrong.
+
 // --- Per-site visual premium spoof toggles ---
 // Declared at module scope (not inside either IIFE below) because both the
 // text/badge-spoof IIFE and the separate ad-slot-removal IIFE need to read
@@ -1282,9 +1297,11 @@ if (HOST_IS_OPEN) {
     // take longer than a couple seconds to render on open.spotify.com's SPA,
     // especially on a cold load, and a single retry isn't enough to catch that.
     // Both setup functions already no-op harmlessly once already-inserted, so
-    // repeated calls are safe. Mirrors Spotifuck's own indefinite pfint polling
-    // (there via document-start + setInterval; here since SpotiwebJS runs at
-    // document-idle with no equivalent loop already in place).
+    // repeated calls are safe. (Spotifuck Mobile's own pfint loop polls
+    // indefinitely too, but only for the play button - it doesn't cover these
+    // two, which is why Mobile was previously giving them just one fixed 2s
+    // retry via addCSSJSHack's single one-shot call. Mobile now runs this same
+    // indefinite poll for them instead - see its firstFuck/addCSSJSHack.)
     setupNpvButton();
     setupNpvWidgetTrigger();
     setupOtherPanelTriggers();
