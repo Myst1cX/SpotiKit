@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         SpotiKit++ desktop
+// @name         SpotiKit desktop ++
 // @namespace    https://github.com/Myst1cX/SpotiKit
-// @version      7.0.11.revert
-// @description  SpotiKit - visual premium UI overlay for Spotify and ad banner blocking. Also restores the old Now Playing View button.
+// @version      7.0.13
+// @description  SpotiKit - Visual premium UI overlay for Spotify and ad banner blocking. Amoled theme. Restores the old Now Playing View button. 
 // @author       kit_fogos, Myst1cX (fork)
 // @match        https://www.spotify.com/*/account/*
 // @match        https://open.spotify.com/*
@@ -304,6 +304,23 @@
 // appropriate since desktop lacks the overlay code Mobile's fix piggybacks
 // on. 
 
+// Twelfth change: A feature I later scrapped (ignore)
+
+// Thirteenth change: 
+// Re-checked every GM_registerMenuCommand callback and click handler 
+// against the Ninth change's (c) coverage audit. Found two real gaps 
+// that audit missed: "Show everything replaced so far" and 
+// "Debug Logging (console)" themselves - the very act of printing the
+// replacement log or flipping the debug flag was never logged, the 
+// same "one user-triggered action with zero trace" problem the Ninth
+// change already fixed for the two Visual Premium Spoof toggles. Both 
+// now log via dbg() (Debug Logging's own toggle logs via a raw 
+// console.log matching dbg()'s exact output shape instead of dbg() 
+// itself, since dbg() is gated behind debugLoggingEnabled() and would 
+// otherwise never print the one line that announces logging just turned on). 
+
+
+
 // --- Per-site visual premium spoof toggles ---
 // Declared at module scope (not inside either IIFE below) because both the
 // text/badge-spoof IIFE and the separate ad-slot-removal IIFE need to read
@@ -370,12 +387,22 @@ if (typeof GM_registerMenuCommand === 'function') {
         }
     );
     GM_registerMenuCommand('📋 Show everything replaced so far (console)', () => {
+        dbg('menu: Show everything replaced so far (console) clicked', 'GM_registerMenuCommand', {});
         printReplacementLog();
         alert('Current text replacements have been logged to the console. Open DevTools (Press F12 or Right click and Inspect), then select the Logs tab under Console to view it.');
     });
     GM_registerMenuCommand(
         (debugLoggingEnabled() ? '✅' : '❌') + ' Debug Logging (console)',
-        () => { setFlag(DEBUG_KEY, !debugLoggingEnabled()); location.reload(); }
+        () => {
+            const next = !debugLoggingEnabled();
+            // Not dbg() - dbg() is gated behind debugLoggingEnabled(), which is
+            // still false at the moment logging gets turned on, so it would
+            // swallow the one line that announces logging just turned on.
+            // Raw console.log matching dbg()'s exact output shape instead.
+            console.log('%c[SPFDBG] menu: Debug Logging (console) toggled', 'color:#1ed760;font-weight:bold;', 'selector:', 'GM_registerMenuCommand', { from: debugLoggingEnabled(), to: next, action: 'reloading' });
+            setFlag(DEBUG_KEY, next);
+            location.reload();
+        }
     );
 }
 
