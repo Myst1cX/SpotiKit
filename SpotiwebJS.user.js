@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SpotiKit++ desktop
 // @namespace    https://github.com/Myst1cX/SpotiKit
-// @version      7.0.10
+// @version      7.0.11
 // @description  SpotiKit - visual premium UI overlay for Spotify and ad banner blocking. Also restores the old Now Playing View button.
 // @author       kit_fogos, Myst1cX (fork)
 // @match        https://www.spotify.com/*/account/*
@@ -267,6 +267,43 @@
 // No code change here - SpotiwebJS's own npvSetupInterval was already
 // correct; only the comment's claim about Mobile was wrong.
 
+// Eleventh change:
+// Ported Spotifuck Mobile's AMOLED pure-black CSS block (from r0/e.java line
+// 207), which had been missed until now despite everything else on this
+// list being a deliberate 1:1 port from Spotifuck. Added as its own
+// GM_addStyle call right after the existing .__sp_curr one below: overrides
+// the Encore dark-theme background custom properties (--background-base,
+// --background-highlight, --background-elevated-base,
+// --background-elevated-highlight, --background-elevated-press,
+// --background-tinted-base) to #000, and force-blacks
+// aside[data-testid=now-playing-bar] the same way Mobile does. Unconditional
+// and always-on, same as Mobile - not gated behind either premium-spoof
+// toggle, since it's pure cosmetic theming with no relation to what those
+// toggles control.
+// A straight copy of Mobile's block (without !important on the six custom
+// properties) left almost everything grey except the exact elements the
+// rule's other selector touched directly (the player bar via
+// aside[data-testid=now-playing-bar]) - not just the sidebar/library, but
+// the main container view too. Root cause: custom properties cascade
+// from the nearest ancestor that declares them, not by selector
+// specificity - Spotify's own code redeclares some of these vars locally on
+// panels closer to the main view/sidebar/library roots than this rule sits,
+// so a plain override loses that proximity race regardless of how the
+// selector is written.
+// Mobile itself was never broken this way and needed no change here: its
+// Sixth big change (bottom-nav/library-overlay) block already carries
+// `.YourLibraryX{background:var(--background-elevated-base)!important}`,
+// an explicit !important pin on exactly the surface that would otherwise
+// lose the same proximity race - added for unrelated bottom-nav-overlay
+// reasons, but it happens to solve this exact cascade problem for Mobile's
+// library/sidebar. SpotiwebJS has no equivalent of that block (desktop
+// doesn't use Mobile's bottom-nav-driven library overlay), so it had no
+// comparable !important anywhere pinning those surfaces. Fixed here by
+// adding !important directly to all six custom properties instead - a
+// blanket fix at the source rather than Mobile's narrower per-surface one,
+// appropriate since desktop lacks the overlay code Mobile's fix piggybacks
+// on. 
+
 // --- Per-site visual premium spoof toggles ---
 // Declared at module scope (not inside either IIFE below) because both the
 // text/badge-spoof IIFE and the separate ad-slot-removal IIFE need to read
@@ -359,6 +396,52 @@ if (typeof GM_registerMenuCommand === 'function') {
             border-radius:3px;
             text-transform:uppercase;
             letter-spacing:.4px;
+        }
+    `);
+
+    // AMOLED pure black mode - ported from Spotifuck Mobile (r0/e.java line 207).
+    // Was missing here; the rest of SpotiwebJS ports Spotifuck 1:1 but this
+    // small self-contained block got skipped. Overrides the Encore dark-theme
+    // background variables to true #000 and force-blacks the player bar,
+    // same as spotifuck-mobile.
+    // AMOLED pure black mode - ported from Spotifuck Mobile (r0/e.java line
+    // 207). IMPORTANT: the six custom properties below MUST carry
+    // !important. Custom properties resolve from the NEAREST ancestor that
+    // declares them, not by selector specificity - Spotify's own code
+    // redeclares some of these same vars locally on panels closer to the
+    // main view/sidebar/library roots than this rule sits, so a plain
+    // declaration here loses that proximity race even though the selector
+    // itself is fine. !important is the one thing that wins regardless of
+    // proximity, since importance is weighed before specificity/origin/order
+    // in the cascade. Confirmed by testing: without !important, only the
+    // literal elements the other selector here touches directly (the player
+    // bar) went black - the main container view, sidebar, and library panel
+    // all stayed grey; adding !important to just these six lines - no extra
+    // per-element rules needed - made every themed surface black.
+    // Mobile itself doesn't need this: its Sixth big change block already
+    // has `.YourLibraryX{background:var(--background-elevated-base)
+    // !important}`, which independently pins its library/sidebar surface
+    // against the same proximity race. SpotiwebJS has no equivalent of that
+    // block (desktop doesn't use Mobile's bottom-nav-driven library
+    // overlay), so !important on the six vars here is doing the job that
+    // rule does for Mobile - just as a blanket fix at the source instead of
+    // a narrower per-surface one.
+    // (An earlier version of this block also force-set
+    // #Desktop_LeftSidebar_Id/.YourLibraryX directly as a belt-and-suspenders
+    // measure; removed since !important alone was sufficient.)
+    GM_addStyle(`
+        .encore-dark-theme {
+            --background-base: #000 !important;
+            --background-highlight: #000 !important;
+            --background-elevated-base: #000 !important;
+            --background-elevated-highlight: #000 !important;
+            --background-elevated-press: #000 !important;
+            --background-tinted-base: #000 !important;
+        }
+        aside[data-testid=now-playing-bar] {
+            background: #000 !important;
+            box-shadow: none;
+            border-top: 1px solid #666;
         }
     `);
 
