@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SpotiKit++ desktop
 // @namespace    https://github.com/Myst1cX/SpotiKit
-// @version      7.0.12 - making amoled toggle but discarding. need proper original UI theme codes. 
+// @version      7.0.11.revert
 // @description  SpotiKit - visual premium UI overlay for Spotify and ad banner blocking. Also restores the old Now Playing View button.
 // @author       kit_fogos, Myst1cX (fork)
 // @match        https://www.spotify.com/*/account/*
@@ -304,53 +304,6 @@
 // appropriate since desktop lacks the overlay code Mobile's fix piggybacks
 // on. 
 
-// Twelfth change:
-// a) AMOLED pure black mode is no longer unconditional. The Eleventh change
-//    above ported it as always-on (matching Mobile at the time), but Mobile
-//    itself never exposed a toggle either - both scripts just forced pure
-//    black on every load with no way to turn it off. Added a new
-//    "Enable AMOLED theme" userscript-manager menu toggle
-//    (GM_registerMenuCommand + GM_setValue/GM_getValue, same ✅/❌
-//    checkmark/cross style as the two "Visual Premium Spoof" toggles and
-//    "Debug Logging"), off by default, GM-storage-backed via a new
-//    AMOLED_KEY/amoledEnabled() pair declared at module scope right next to
-//    DEBUG_KEY/debugLoggingEnabled(). The GM_addStyle call from the Eleventh
-//    change is now wrapped in `if (amoledEnabled())` - this toggle is the
-//    ONLY thing that invokes AMOLED mode now. Toggling reloads the page,
-//    same as every other flag here.
-// b) Registered as the FIRST userscript-manager menu command (previously
-//    the two Visual Premium Spoof toggles were first) - order is now:
-//    Enable AMOLED theme, Visual Premium Spoof (open.spotify.com),
-//    Visual Premium Spoof (www.spotify.com), Show everything replaced so
-//    far, Debug Logging (console).
-// c) dbg() coverage audit for this change and one gap found in passing:
-//    - The new AMOLED toggle logs from/to state before reload, same shape
-//      as the two Visual Premium Spoof toggles.
-//    - The AMOLED GM_addStyle call itself now logs through dbg() on both
-//      branches (style injected / style skipped), same pattern as
-//      forceEnglish()'s HOST_IS_OPEN gate logging its own skip.
-//    - Re-checked every GM_registerMenuCommand callback and click handler
-//      against the Ninth change's (c) coverage audit. Found two real gaps
-//      that audit missed: "Show everything replaced so far" and
-//      "Debug Logging (console)" themselves - the very act of printing the
-//      replacement log or flipping the debug flag was never logged, the
-//      same "one user-triggered action with zero trace" problem the Ninth
-//      change already fixed for the two Visual Premium Spoof toggles. Both
-//      now log via dbg() (Debug Logging's own toggle logs via a raw
-//      console.log matching dbg()'s exact output shape instead of dbg()
-//      itself, since dbg() is gated behind debugLoggingEnabled() and would
-//      otherwise never print the one line that announces logging just
-//      turned on).
-//    - Everything else - every remaining click handler, state-change
-//      function, and menu command - was already covered as of the Seventh/
-//      Ninth changes. The setupNpvButton/setupNpvWidgetTrigger/
-//      setupOtherPanelTriggers "target not found yet" early-return
-//      exception from the Ninth change (c) still stands unchanged: those
-//      three still run on a 1-second polling loop while the page loads, so
-//      logging every failed poll would still spam the console every second
-//      until the player bar renders. Left unlogged on purpose, same as
-//      before - not a missed spot.
-
 // --- Per-site visual premium spoof toggles ---
 // Declared at module scope (not inside either IIFE below) because both the
 // text/badge-spoof IIFE and the separate ad-slot-removal IIFE need to read
@@ -395,29 +348,9 @@ function dbg(event, selector, details) {
     console.log(`%c[SPFDBG] ${event}`, 'color:#1ed760;font-weight:bold;', 'selector:', selector, details || '');
 }
 
-// --- AMOLED pure black mode toggle ---
-// Off by default. This GM-storage-backed flag is now the ONLY thing that
-// gates the AMOLED CSS block further down (see amoledEnabled() check around
-// the GM_addStyle call inside the first IIFE) - previously that block
-// injected unconditionally with no toggle at all.
-const AMOLED_KEY = 'spotiweb_amoledMode';
-function amoledEnabled() {
-    try { return typeof GM_getValue === 'function' ? GM_getValue(AMOLED_KEY, false) : false; }
-    catch (e) { return false; }
-}
-
 console.log('%c[SPFDBG] filter this console by "SPFDBG" to see every button click, selector, and resulting view change', 'color:#1ed760;font-weight:bold;');
 
 if (typeof GM_registerMenuCommand === 'function') {
-    GM_registerMenuCommand(
-        (amoledEnabled() ? '✅' : '❌') + ' Enable AMOLED theme',
-        () => {
-            const next = !amoledEnabled();
-            dbg('menu: Enable AMOLED theme toggled', 'GM_registerMenuCommand', { from: amoledEnabled(), to: next, action: 'reloading' });
-            setFlag(AMOLED_KEY, next);
-            location.reload();
-        }
-    );
     GM_registerMenuCommand(
         (getFlag(SPOOF_OPEN_KEY) ? '✅' : '❌') + ' Visual Premium Spoof (open.spotify.com)',
         () => {
@@ -437,22 +370,12 @@ if (typeof GM_registerMenuCommand === 'function') {
         }
     );
     GM_registerMenuCommand('📋 Show everything replaced so far (console)', () => {
-        dbg('menu: Show everything replaced so far triggered', 'GM_registerMenuCommand', { action: 'printReplacementLog()' });
         printReplacementLog();
         alert('Current text replacements have been logged to the console. Open DevTools (Press F12 or Right click and Inspect), then select the Logs tab under Console to view it.');
     });
     GM_registerMenuCommand(
         (debugLoggingEnabled() ? '✅' : '❌') + ' Debug Logging (console)',
-        () => {
-            const next = !debugLoggingEnabled();
-            // Logged BEFORE the flag flips (not gated behind debugLoggingEnabled()
-            // like every other dbg() call) so turning debug logging ON always has
-            // this toggle itself as the first line in the console - otherwise the
-            // very act of enabling it would be the one action with zero trace.
-            console.log('%c[SPFDBG] menu: Debug Logging (console) toggled', 'color:#1ed760;font-weight:bold;', 'selector:', 'GM_registerMenuCommand', { from: debugLoggingEnabled(), to: next, action: 'reloading' });
-            setFlag(DEBUG_KEY, next);
-            location.reload();
-        }
+        () => { setFlag(DEBUG_KEY, !debugLoggingEnabled()); location.reload(); }
     );
 }
 
@@ -506,31 +429,21 @@ if (typeof GM_registerMenuCommand === 'function') {
     // (An earlier version of this block also force-set
     // #Desktop_LeftSidebar_Id/.YourLibraryX directly as a belt-and-suspenders
     // measure; removed since !important alone was sufficient.)
-    // Gated behind the "Enable AMOLED theme" userscript-manager menu toggle
-    // (off by default, GM-storage-backed via AMOLED_KEY/amoledEnabled() -
-    // declared at module scope above). Previously this block ran
-    // unconditionally with no way to turn it off; the toggle is now the ONLY
-    // way this CSS gets injected.
-    if (amoledEnabled()) {
-        GM_addStyle(`
-            .encore-dark-theme {
-                --background-base: #000 !important;
-                --background-highlight: #000 !important;
-                --background-elevated-base: #000 !important;
-                --background-elevated-highlight: #000 !important;
-                --background-elevated-press: #000 !important;
-                --background-tinted-base: #000 !important;
-            }
-            aside[data-testid=now-playing-bar] {
-                background: #000 !important;
-                box-shadow: none;
-                border-top: 1px solid #666;
-            }
-        `);
-        dbg('AMOLED: pure black mode style injected', 'GM_addStyle', {});
-    } else {
-        dbg('AMOLED: pure black mode disabled, skipping style injection', 'GM_addStyle', {});
-    }
+    GM_addStyle(`
+        .encore-dark-theme {
+            --background-base: #000 !important;
+            --background-highlight: #000 !important;
+            --background-elevated-base: #000 !important;
+            --background-elevated-highlight: #000 !important;
+            --background-elevated-press: #000 !important;
+            --background-tinted-base: #000 !important;
+        }
+        aside[data-testid=now-playing-bar] {
+            background: #000 !important;
+            box-shadow: none;
+            border-top: 1px solid #666;
+        }
+    `);
 
     const REPLACE = {
         "Spotify Free": "Premium Individual",
