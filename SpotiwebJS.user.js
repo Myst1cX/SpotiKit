@@ -1,16 +1,12 @@
 // ==UserScript==
 // @name         SpotiKit++ desktop
 // @namespace    https://github.com/Myst1cX/SpotiKit
-// @version      7.0.13
+// @version      7.0.14
 // @description  SpotiKit - Visual premium UI overlay for Spotify and ad banner blocking. Amoled theme. Restores the old Now Playing View button. 
 // @author       kit_fogos, Myst1cX (fork)
-// @match        https://www.spotify.com/*/account/*
-// @match        https://open.spotify.com/*
-// @match        https://www.spotify.com/*/premium/*
-// @match        https://www.spotify.com/*/duo/*
-// @match        https://www.spotify.com/*/student/*
-// @match        https://www.spotify.com/*/family/*
-// @match        https://payments.spotify.com/*
+// @match        *://open.spotify.com/*
+// @match        *://www.spotify.com/*
+// @match        *://payments.spotify.com/*
 // @grant        GM_addStyle
 // @grant        GM_registerMenuCommand
 // @grant        GM_setValue
@@ -319,6 +315,20 @@
 // itself, since dbg() is gated behind debugLoggingEnabled() and would 
 // otherwise never print the one line that announces logging just turned on). 
 
+// Fourteenth change - metadata fix:
+// www.spotify.com was only matched on five narrow paths (*/account/*,
+// */premium/*, */duo/*, */student/*, */family/*). Since www.spotify.com routes
+// client-side (pushState, no full reload), landing anywhere else first (e.g.
+// the homepage) meant the script never got injected at all, even after
+// navigating into a matched path. Fixed by matching the whole www.spotify.com
+// origin. payments.spotify.com already matched its whole origin and is only
+// ever reached via a real (non-SPA) navigation, so it didn't have this bug -
+// left as-is aside from the @match style pass below.
+// Side effect: the premium-spoof text/badge replacements and forceEnglish()'s
+// region redirect now also run on other www.spotify.com pages, not just the
+// original five.
+// All three @match lines now use *:// instead of https://, purely cosmetic
+// (Spotify enforces HTTPS on all three anyway).
 
 
 // --- Per-site visual premium spoof toggles ---
