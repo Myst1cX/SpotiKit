@@ -1,171 +1,97 @@
-## SPOTIKIT USERSCRIPTS
+## SpotiwebJS
 
-> Fork of [kitbodega/SpotiKit](https://github.com/kitbodega/SpotiKit).   
-> **Recommended userscript manager:** [Violentmonkey](https://violentmonkey.github.io/) or [Tampermonkey](https://www.tampermonkey.net/)   
+A desktop-layout userscript for the Spotify Web Player: spoofs Spotify Premium visually, strips ad-slot elements from the free-tier UI, forces the player to render in English, restores a real "Now Playing View" toggle button with its own guard system, and adds a pure-black AMOLED theme. No mobile-layout changes.  Works on desktop or on an actual phone browser if you just prefer the desktop-style layout.
 
-Two scripts, pick one:
+> **Recommended userscript manager:** [Violentmonkey](https://violentmonkey.github.io/) or [Tampermonkey](https://www.tampermonkey.net/)    
+> Want a mobile-layout version instead?    
+> See [Spotifuck Mobile](https://github.com/Myst1cX/spotifuck-userscript/blob/main/spotifuck-mobile/README.md) in this same repo.
 
-> **SpotiwebJS**: Premium spoof + ad-slot removal only. Forced English locale spoof. No desktop UI layout changes except for the restoration of the old Now Playing View button and Amoled mode.   
->
-> **SpotiKitMobileDesktop**: Mobile version of SpotiwebJS. Adds a full mobile-like layout on open.spotify.com (floating player, bottom nav, library-as-overlay).
->
-> **NOTE**: **Spotifuck Mobile** is the recommended successor. It includes everything from SpotiKitMobileDesktop, fixes the library bugs, restores the Now Playing View toggle, and keeps the ad-slot cleanup, visual premium spoof, logging of replaced text nodes, and forced English locale spoof. Check out [Spotifuck's Installation and Features Guide](https://github.com/Myst1cX/spotifuck-userscript/blob/main/README.md).
->
-> **NOTE**: The original author has resumed development of SpotiKitMobileDesktop under **SpotiKitUI**. It focuses on the mobile-like UI only (no premium spoof, ad-slot cleanup, logging, or forced English). Updates can be found [here](https://github.com/kitbodega/SpotiKit).
+## Index
+
+- [Features](#features)
+  - [Now Playing View button restoration & guard system](#now-playing-view-button-restoration--guard-system)
+  - [AMOLED mode](#amoled-mode)
+  - [Force English](#force-english)
+  - [Visual Premium Spoof](#visual-premium-spoof)
+  - [Ad-Slot Cleanup](#ad-slot-cleanup)
+  - [Debug Logging & Replacement Log](#debug-logging--replacement-log)
+  - [Efficient Scanning](#efficient-scanning)
+- [Installation](#installation)
+- [Ad-Blocking (actual audio ads)](#ad-blocking-actual-audio-ads)
+- [Notes](#notes)
+- [Feedback](#feedback)
+- [Credits](#credits)
+- [License](#license)
 
 ## Features
 
-> **MOBILE-LIKE UI ENHANCEMENT**  
->
-> **FORCE ENGLISH**  
-> Overrides `navigator.language`, strips non-English `/intl-xx/` and region paths, and flips your account's actual language setting at `open.spotify.com/preferences` through a hidden iframe - reloads, verifies it stuck, retries a few times if not.  
-> Everything else here is keyed off English aria-labels, so without this the scripts just silently stop matching on non-English accounts.
->
-> **VISUAL PREMIUM SPOOF**  
-> Swaps "Free"/"Spotify Free" text and badges for Premium, recolors plan cards, relabels or hides upgrade/"Try" buttons, turns pricing-table cells into checkmarks, and rebuilds the account compact banner into "Edit profile"/"Payment method" buttons instead of an upgrade nag.  
-> Toggleable per site (for `open.spotify.com` and for `www.spotify.com`) from the userscript manager menu, saved via GM storage, enabled by default.
->
-> **AD-SLOT CLEANUP**  
-> Removes ad-slot-container elements from the DOM. Cosmetic only.   
-> Doesn't touch the actual audio ad requests (see [Ad-Blocking (actual audio ads)](https://github.com/Myst1cX/SpotiKit/blob/main/README.md#ad-blocking-actual-audio-ads) below for that.
->
-> **LOGGING OF TEXT NODE SWAPS**  
-> Every text swap gets logged. A "📋 Show everything replaced so far" menu command dumps it as a table in the console.
->
-> **EFFICIENT SCANNING**  
-> The text-replacement pass only re-scans nodes that actually changed (debounced MutationObserver), not a blind full-page walk on a timer.
+> Matches the whole `open.spotify.com`, `www.spotify.com`, and `payments.spotify.com` origins.
 
-### SpotiwebJS 
+### Now Playing View button restoration & guard system
 
-> Matches `open.spotify.com`, `www.spotify.com`'s account/premium/duo/student/family pages and `payments.spotify.com` (plan payment blockers/redirects),   
-> Premium/duo/student/family pages get replaced outright with a "you don't need Premium" message and a link home.  
-> Payments page gets replaced with a "don't waste your money" message; checkout/payment buttons are disabled.   
-> Restoration of the old Now Playing View button. Amoled mode.     
+The old `Now Playing View` button toggle was ported directly from the reverse-engineered Spotifuck APK (`r0/e.java`) and enrichened with a guard system that assures only authorized clicks open the `Now Playing View` panel. Panel-toggle logic - `clickNP()`/`closeNowPlay()`/`isNpvOpen()`/`npvGuardObserver` - later carried over into SpotiwebJS as well. Adds the Now Playing View button next to the lyrics button (the old npv button's position), which replaces Spotify's new sidebar strip native toggle (that now gets auto-closed). Only clicks through that button, or the player-bar album art (considered a native toggle aswell), are treated as authorized opens - a `MutationObserver` auto-closes the panel any other time it becomes visible (on page load, if activated by a stray native toggle/track change/another script...). `isNpvOpen()` reads the shared right-side panel container's own `aria-label`/class directly (`"Now playing view"`/`.NowPlayingView` vs `"Queue"` vs `"Connect to a device"`) rather than querying into it, and a separate short-lived guard window covers real Queue/Connect clicks, so the panel guard doesn't mistake either of those for an unauthorized Now Playing View open and close them by accident. 
 
-### SpotiKitMobileDesktop - outdated
+### AMOLED mode
 
-> Does everything above too (layout changes are restricted to open.spotify.com so they don't leak onto the account pages), plus:
->
-> **FLOATING PLAYER**  
-> Glassmorphism now-playing bar (blur, translucent, rounded corners) with a minimize toggle.
->
-> **BOTTOM NAV**  
-> Home / Search / Library, built-in fallback icons, active tab follows the route.
->
-> **LIBRARY OVERLAY**  
-> Library opens full-screen instead of as a sidebar, closes itself once you tap into a track/album/playlist (folders don't trigger the close, so navigating to playlists still works).
->
-> **SEARCH BAR**  
-> Hidden everywhere except the search page.
->
-> **SIMPLER REDIRECTS**  
-> Premium/duo/student/family and payments pages redirect straight to open.spotify.com instead of showing an overlay message.
+Pure-black AMOLED theme, ported from the same Android APK (`r0/e.java` line 207) - also later carried over into SpotiwebJS. Forces the player bar and the app's dark-theme background variables to pure black. Always on, not tied to either spoof toggle.
 
-* * *
+### Force English
 
-> **NOTE:** This is an experimental build. There may be bugs with the library view. Now Playing View feature is missing.   
-> **NOTE**: An updated version of the mobile script (Spotifuck Mobile) can be found [here](https://github.com/Myst1cX/spotifuck-userscript/raw/main/spotifuck-mobile.user.js) - fixed the library bugs, restored the Now Playing View toggle.   
-> **Spotifuck Mobile**: takes in all of SpotiKitDesktopMobile. Ad-slot cleanup and visual premium spoof, with which also came the logging of replaced text nodes and a forced english locale spoof are features that remain in this version. Check out [Spotifuck's Installation Guide](https://github.com/Myst1cX/spotifuck-userscript/blob/main/README.md).    
-> **NOTE**: The original dev of the SpotiKitMobileScript script (now called SpotiKitUI) has resumed work. Their updates can be found [here](https://github.com/kitbodega/SpotiKit/blob/main/SpotiKitUI.user.js) - they will likely merge the library bug fixes and the Now Playing View. Watch out for new updates!    
-> SpotiKitUI focuses on the mobile-like enhancement aspect. Other features (ad-slot cleanup and visual premium spoof, with which also came the logging of replaced text nodes and a forced english locale spoof are no longer present there).    
+Originally added in v6.3 of spotifuck-mobile.user.js as the browser-side equivalent of the reverse-engineered Spotifuck app's own locale-forcing (its `ForceEn` behavior, which forces the app's Android Configuration locale to English before loading its WebView) - there's no app Configuration to set in a browser, so this spoofs `navigator.language`/`navigator.languages` to `en-US` at document-start, redirects `www.spotify.com` off non-English `xx-yy` region-language paths (e.g. `/si-sl/` &rarr; `/si-en/`) and off `/intl-xx/` prefixes, and flips the account's actual language setting at `open.spotify.com/preferences` through a hidden iframe - then verifies the change stuck on the next load and retries a capped number of times if it didn't. The region-code table this relies on (which countries have no English storefront, which ones use a bare country code for English, etc.) is hand-checked against Spotify's own `/spotify.com/select-your-country-region/` listing and then ported back here, replacing the script's own initially smaller allowlist. The `www.spotify.com` region-path redirect is gated behind the "Visual Premium Spoof (www.spotify.com)" toggle - turning that off also stops this redirect. The `/intl-xx/` URL correction and the account-setting flip don't run immediately at document-start; they wait for the player's Play/Pause button (or, for signed-out sessions, the `sign-up bar` prompt) to actually exist first, since running that correction before Spotify's own SPA has started hydrating could leave the page stuck mid-load.
 
-* * *
+Everything else here is keyed off English aria-labels, so without this the script just silently stops matching on non-English accounts.
+
+### Visual Premium Spoof
+
+Adopted from SpotiwebJS/kitbodega's original SpotiKit code and extended independently since. Rewrites the free-tier UI to look like a Premium account: swaps "Free"/"Spotify Free"/"Free plan" text for "Premium Individual" and "1 Free account" copy for "1 Premium account" wherever it appears in headings, spans, badges, and plan cards, recoloring the matched elements pink. Relabels "Get/Buy/Join Premium" buttons to a disabled "DONT JOIN PREMIUM", and "Explore/View plans" to a disabled "Manage plan" - both click-blocked, not just relabeled. Hides the upgrade button, the install-app link, "Premium Plans" menu links, and any "Try"-prefixed buttons, and turns empty/"—"/"No"/"Free"-containing pricing-table cells into green checkmarks. Rebuilds the account page's compact upgrade banner into "Edit profile"/"Payment method" buttons that link to the account's own region-correct URL (`https://www.spotify.com/<region>/account/...`, derived from the account's actual locale rather than hardcoded), instead of an upgrade nag. On `www.spotify.com`'s Premium/Duo/Student/Family plan pages, replaces the entire page content with a "You dont need Spotify Premium. Trust me." message and a link home, and on `payments.spotify.com`, replaces the checkout page with a "DONT WASTE YOUR MONEY ON SPOTIFY" message and disables the checkout/payment buttons (forms, submit buttons, and the "Add new card" button) so they no-op instead of submitting. The "Add new card" button is also blocked separately on `www.spotify.com`'s own account payment-methods page (`/account/payment-methods/`, aliased with `/account/saved-payment-cards/`), since that's a different host than the checkout blocker above and needs its own gate.
+
+Toggleable per site (one switch for `open.spotify.com`, a second for `www.spotify.com` **and** `payments.spotify.com` together) from the userscript-manager menu, saved via GM storage, enabled by default.
+
+### Ad-Slot Cleanup
+
+Removes ad-slot-container elements (and a couple of specific ad-button classes) from the DOM on `open.spotify.com`, via a `MutationObserver` on `document.body`. Cosmetic only - ordinary ad-blocker-style DOM removal, not a way around anything server-enforced (bitrate, offline downloads, skip limits) - and doesn't touch the actual audio ad requests (see [Ad-Blocking (actual audio ads)](#ad-blocking-actual-audio-ads) below for that). Ships bundled with the premium spoof and is gated behind the same "Visual Premium Spoof (open.spotify.com)" toggle - turning that off also turns this off.
+
+### Debug Logging & Replacement Log
+
+Every text swap the premium spoof makes is recorded (selector, before/after text, times applied); a "📋 Show everything replaced so far" menu command dumps it as a table in the console. Separately, a "Debug Logging (console)" menu toggle (off by default) turns on verbose `[SPFDBG]` console logging for every click handler, selector match, and state change the script makes - filter your browser console by `SPFDBG` to isolate it.
+
+### Efficient Scanning
+
+The text-replacement pass only re-scans nodes that actually changed (via a debounced `MutationObserver` watching both added/removed nodes and in-place text updates), not a blind full-page walk on a timer.
 
 ## Installation
-a) DESKTOP INSTALLATION:
-> 1. Install [Violentmonkey](https://violentmonkey.github.io/)  
-> 2. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)  
-> 3. Alternative to Ublock Origin for blocking Spotify ads: [uSpot - Spotify Ad Blocker](https://github.com/Myst1cX/uSpot/releases). Click [here](https://github.com/Myst1cX/uSpot/blob/main/README.md) for installation steps.   
-> 4. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator (fork)](https://raw.githubusercontent.com/Myst1cX/cigi-spotify-translator-fork/main/cigi-spotify-translator-fork.user.js).    
-> Click [here](https://github.com/Myst1cX/cigi-spotify-translator-fork/blob/main/README.md) for the setup and feature list.    
-> 5. Install [SpotiwebJS](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.user.js) (ad-slot removal, visual premium and forced English locale spoof, restoration of the old Now Playing View button)    
-> 6. Optional: [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Click [here](https://github.com/Myst1cX/spotify-web-lyrics-plus/blob/main/README.md) for the setup and feature list.    
+
+> 1. Install [Violentmonkey](https://violentmonkey.github.io/)
+> 2. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)
+> 3. Alternative to Ublock Origin for blocking Spotify ads: [uSpot - Spotify Ad Blocker](https://github.com/Myst1cX/uSpot/releases). Click [here](https://github.com/Myst1cX/uSpot/blob/main/README.md) for installation steps.
+> 4. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator (fork)](https://raw.githubusercontent.com/Myst1cX/cigi-spotify-translator-fork/main/cigi-spotify-translator-fork.user.js). Click [here](https://github.com/Myst1cX/cigi-spotify-translator-fork/blob/main/README.md) for the setup and feature list.
+> 5. Install [SpotiwebJS](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiwebJS.user.js) (ad-slot removal, visual premium and forced English locale spoof, restoration of the old Now Playing View button)
+> 6. Optional: [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Click [here](https://github.com/Myst1cX/spotify-web-lyrics-plus/blob/main/README.md) for the setup and feature list.
 > 7. Open [Spotify Web Player](https://open.spotify.com/)
-
-b) MOBILE INSTALLATION: 
-> NEW 'QUETTA BROWSER + USER-AGENT SWITCHER AND MANAGER' METHOD:    
-> Credits to: [u/soujunim/](https://www.reddit.com/r/SpotifyLatestModAPK/comments/1upaed1/mobile_browser_spotifuck_ui_and_adblock/)
-> 
-> 1. Download and install the Quetta Browser.    
-> 2. Quetta Browser > Open Spotify Web and login to your account   
-> 3. Press on the three dots next to the search bar's tab counter.
-> 4. Go to Settings > Appearance > Disable 'Enhance Dark Theme'. Now exit the Settings.
-> 5. Once again press on the three dots next to the search bar's tab counter.   
-> 6. Click on the Extensions tab > Manage Extensions > Search Extensions and get the following:   
-> 'Violentmonkey', 'User-Agent Switcher and Manager', 'Spotify Ad-Blocker (Blockify)'   
-> 7. Backup ad-blocking extension: [uSpot - Spotify Ad Blocker](https://github.com/Myst1cX/uSpot/releases)    
-> Click [here](https://github.com/Myst1cX/uSpot/blob/main/README.md) for installation steps.   
-> 8. NOTE: Keep only 1 ad-blocking extension enabled at the same time.
-> 9. NOTE: Make sure to disable Quetta's own adblock for open.spotify.com so that it doesn't interfere with the installed adblock extension. Press on the three dots next to the search bar's tab counter > Click on the privacy guard (shield icon with a lock inside) > Turn off 'Blocker on This Site'.         
-> 10. Optional - for a lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator (fork)](https://raw.githubusercontent.com/Myst1cX/cigi-spotify-translator-fork/main/cigi-spotify-translator-fork.user.js).    
-> Click [here](https://github.com/Myst1cX/cigi-spotify-translator-fork/blob/main/README.md) for the setup and feature list.    
-> 11. Optional: [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Click [here](https://github.com/Myst1cX/spotify-web-lyrics-plus/blob/main/README.md) for the setup and feature list.   
-> 12. Install your preferred mobile layout script:   
-> a) Spotifuck Mobile (stable. mobile-like layout + visual premium spoof. no library bugs. NowPlayingView button returns.): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
-> b) SpotiKitUI (only has the mobile-like layout enhancement. no spoofs. beta, may have unresolved bugs): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
-> c) SpotiKitMobileDesktop (my old 7.31.fork of SpotiKitUI. with library bugs, no NowPlayingView button. no longer updated.): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)    
-> 13. Open the Spotify web player > Press on the three dots next to the search bar's tab counter > Click on the Extensions tab > Click on the 'User-Agent Switcher and Manager' extension icon > Select the first option (a Chrome Windows 10 user agent) > Click 'Apply (this tab' and then 'Refresh Tab'.   
-> 14. Spotify web player should reload. The interface should now be mobile-friendly.   
-> 15. NOTE: Keep Desktop Mode (browser setting) disabled.    
-
-* * * 
-
-> LEGACY 'FIREFOX BROWSER + CHAMELEON EXTENSION' METHOD (SLOWER, LESS RESPONSIVE):
-> 1. Download the latest version of Firefox (must be the Original version; Nightly or other releases might break your userscript manager).  
-> 2. Install [Violentmonkey](https://violentmonkey.github.io/)    
-> 3. Recommended: [Ublock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)  
-> 4. Alternative to Ublock Origin for blocking Spotify ads: [uSpot - Spotify Ad Blocker](https://github.com/Myst1cX/uSpot/releases). Click [here](https://github.com/Myst1cX/uSpot/blob/main/README.md) for installation steps.   
-> 5. Optional - for the lyrics translator inside the stock spotify lyrics view: [Cigi Spotify Translator (fork)](https://raw.githubusercontent.com/Myst1cX/cigi-spotify-translator-fork/main/cigi-spotify-translator-fork.user.js).    
-> Click [here](https://github.com/Myst1cX/cigi-spotify-translator-fork/blob/main/README.md) for the setup and feature list.    
-> 6. Optional: [Spotify Lyrics+](https://raw.githubusercontent.com/Myst1cX/spotify-web-lyrics-plus/main/pip-gui-stable.user.js). Click [here](https://github.com/Myst1cX/spotify-web-lyrics-plus/blob/main/README.md) for the setup and feature list.    
-> 7. Install your preferred mobile layout script:
-> a) Spotifuck Mobile (stable. mobile-like layout + visual premium spoof. no library bugs. NowPlayingView button returns.): [install](https://raw.githubusercontent.com/Myst1cX/spotifuck-userscript/main/spotifuck-mobile.user.js)     
-> b) SpotiKitUI (only has the mobile-like layout enhancement. no spoofs. beta, may have unresolved bugs): [install](https://raw.githubusercontent.com/kitbodega/SpotiKit/main/SpotiKitUI.user.js)    
-> c) SpotiKitMobileDesktop (my old 7.31.fork of SpotiKitUI. with library bugs, no NowPlayingView button. no longer updated.): [install](https://raw.githubusercontent.com/Myst1cX/SpotiKit/main/SpotiKitMobileDesktop.user.js)    
-> 8. Install [Chameleon](https://addons.mozilla.org/en-US/android/addon/chameleon-ext/) extension   
-> 9. Chameleon extension settings > Profile Panel (globe icon) > Select Random Profile (Desktop)  
-> 10. Chameleon extension settings > Options Panel > Select the 'Profile' option under the 'Screen size' option  
-> 11. Go back to Firefox browser > Firefox Settings > Site settings > Click on "DRM-controlled content" and select "Allowed"  
-> 12. Restart Firefox  
-> 13. Open Spotify Web and login to your account  
-> 14. The interface should be mobile friendly > If it ever resets, try redoing the Chameleon extension configuration and refreshing the Spotify page
-> 15. NOTE: Keep Desktop Mode (browser setting) disabled.
-> 16. Play a song  
-> 17. Click on the Lyrics+ button to open the interface popup and see the song lyrics  
-
-* * * 
-
-> **TIP**: Add Spotify Web Player to your home screen for a PWA-like experience. PWA (Priority Web Application) gives you an easy access shortcut to the Spotify player.  
-> **SIDE NOTE**: You can begin playing a song in the web interface and then open the Spotify app - it will let you play music there and control playback without any limitations.  
-
-* * * 
-
-> REMEMBER: PWA's essentially allow running an entire app in your web browser.    
-> A good way of finding progressive web apps is through `store.app`  
-> The degree to which you can block ads varies depending on the app, but it is often times better than using the actual app - a PWA also uses less storage than installing a native app.  
-
-* * *
 
 ## Ad-Blocking (actual audio ads)
 
-> Neither script here blocks the ad audio itself — the ad-slot removal is just DOM cleanup. For true audio ad blocking, use **[uBlock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)** or **[uSpot](https://github.com/Myst1cX/uSpot/releases/)** alongside whichever script you picked. More on the difference [here](https://github.com/Myst1cX/uSpot/blob/main/README.md#uspot-vs-ublock-origin-what-is-the-difference).
+> SpotiwebJS doesn't block the ad audio itself - the ad-slot removal function is just DOM cleanup. Aims to remove Spotify's client-side ad-slot container (data-testid="ad-slot-container"), related ad-* UI wrappers, and an associated button from the DOM as they appear, using a MutationObserver. For true audio ad blocking, use a reliable adblocker depending on yoor browser. On Firefox and its non-chromium forks (no MV3 support), use: **[uBlock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/)** or **[uSpot](https://github.com/Myst1cX/uSpot/releases/)** alongside it. More on the difference [here](https://github.com/Myst1cX/uSpot/blob/main/README.md#uspot-vs-ublock-origin-what-is-the-difference). On Chromium browsers without MV2 support (MV3 only), use: **[Spotify Ad Blocker - Blockify](https://chromewebstore.google.com/detail/spotify-ad-blocker-blocki/nfmlkliedggdodlbgghmmchhgckjoaml).**
 
 ## Notes
 
 > - Client-side only, doesn't touch Spotify's servers.
 > - Doesn't change any account data except the language setting, and only if Force English needs to flip it.
-> - Needs a userscript manager (Tampermonkey or Violentmonkey preferrably).
+> - Needs a userscript manager (Tampermonkey or Violentmonkey preferably).
+> - This is the desktop-layout option.
 
 ## Feedback
 
-> For feedback or bug reports, open an issue:  
-> [https://github.com/Myst1cX/SpotiKit/issues](https://github.com/Myst1cX/SpotiKit/issues)
+> Open an issue at [https://github.com/Myst1cX/SpotiKit/issues](https://github.com/Myst1cX/SpotiKit/issues)
 
 ## Credits
 
-> 1. **Forked from** [kitbodega/SpotiKit](https://github.com/kitbodega/SpotiKit).
-> 2. **Powered by** [Spotify](https://open.spotify.com/).
+1. **Forked from** [kitbodega/SpotiKit](https://github.com/kitbodega/SpotiKit) v7.0 - the original Visual Premium Spoof (text/badge replacement, plan-page/checkout overlays) and Ad-Slot DOM Cleanup engine build on kitbodega's own code.
+2. **Now Playing View button restoration, its guard system, and AMOLED mode are ported from [Spotifuck Mobile](https://github.com/Myst1cX/spotifuck-userscript)** (this repo's other script) - both trace back to the reverse-engineered Android Spotifuck mod's own panel-toggle and AMOLED logic, and were carried over here after Spotifuck Mobile had them first.
+3. **Force English is likewise carried over from Spotifuck Mobile**, where it started as a browser-side equivalent of the Android app's own locale-forcing; not part of kitbodega's original SpotiKit.
+4. **All porting, adaptation, bug fixes (including the account-page banner links, which kitbodega's original v7.0 hardcoded to a single region rather than the account's own), the toggle/debug-logging/replacement-log system, and independent extensions from v7.0 onward by** Myst1cX.
+5. **Powered by** [Spotify](https://open.spotify.com/).
 
 ## License
 
-> This project is licensed under the [MIT License](https://github.com/Myst1cX/SpotiKit/blob/main/LICENSE). (attached below is the original author's license)
+> Licensed under the [MIT License](https://github.com/Myst1cX/SpotiKit/blob/main/LICENSE) (the original author's license is attached in that repo).
