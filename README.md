@@ -13,7 +13,7 @@ A desktop-layout userscript for the Spotify Web Player: spoofs Spotify Premium v
   - [AMOLED mode](#amoled-mode)
   - [Force English](#force-english)
   - [Visual Premium Spoof](#visual-premium-spoof)
-  - [Ad-Slot Cleanup (DOM only, doesn't touch actual audio ads)](#ad-slot-cleanup)
+  - [Ad-Slot Cleanup (DOM only, doesn't touch actual audio ads)](#ad-slot-cleanup-dom-only-doesnt-touch-actual-audio-ads)
   - [Debug Logging & Replacement Log](#debug-logging--replacement-log)
   - [Efficient Scanning](#efficient-scanning)
 - [Installation](#installation)
