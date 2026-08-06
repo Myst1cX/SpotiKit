@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SpotiKit++ desktop
+// @name         Spotifuck Desktop
 // @namespace    https://github.com/Myst1cX/SpotiKit
 // @version      7.0.16
 // @description  SpotiKit - Visual premium UI overlay for Spotify and ad banner blocking. Amoled theme. Restores the old Now Playing View button.
@@ -415,13 +415,19 @@
 //    on label matching - isNpvOpen()/isQueueOpen()/isConnectOpen() still
 //    exist and are used elsewhere (clickNP(), the panel-trigger listeners,
 //    and the guard's own dbg() diagnostics), just no longer decide whether
-//    to close. setupNpvButton's own init-close deliberately uses the same
+//    to close. setupNpvButton's own init-close (which only ever runs once,
+//    right when npBtn first gets inserted) deliberately uses the same
 //    isAnyPanelOpen()/isAnyPanelAuthorized() combo as panelGuardObserver
-//    instead (not isNpvOpen()), since it can run while a fresh Queue/Connect
-//    open is still showing the stale default aria-label from (b) above.
-//    Since the observer now genuinely covers all three panel types rather
-//    than just NPV, renamed it (and its dbg() label) from
-//    npvGuardObserver/"NPV guard" to panelGuardObserver/"Panel guard"
+//    instead of isNpvOpen(): if that one-time insertion happens to land in
+//    the same narrow window as someone freshly opening Queue or Connect,
+//    isNpvOpen() could get fooled by the same stale-label issue as (b)
+//    above - it would still see the generic "Now playing view" default,
+//    wrongly conclude NPV was open, and close the Queue/Connect panel the
+//    person had just legitimately opened. Checking "is ANY panel open, and
+//    was it authorized" instead of "is NPV specifically open" sidesteps
+//    that entirely. Since the observer now genuinely covers all three
+//    panel types rather than just NPV, renamed it (and its dbg() label)
+//    from npvGuardObserver/"NPV guard" to panelGuardObserver/"Panel guard"
 //    throughout.
 // c) Closing the panel via its own in-panel X button - Spotify's native
 //    close control, wired to Spotify's own handler - never ran through
