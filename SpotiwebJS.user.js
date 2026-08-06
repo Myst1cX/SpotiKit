@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotifuck Desktop
 // @namespace    https://github.com/Myst1cX/SpotiKit
-// @version      7.0.16
+// @version      7.0.18
 // @description  SpotiKit - Visual premium UI overlay for Spotify and ad banner blocking. Amoled theme. Restores the old Now Playing View button.
 // @author       kit_fogos, Myst1cX (fork)
 // @match        *://open.spotify.com/*
@@ -466,6 +466,97 @@
 // Full investigation notes and DOM-capture evidence for all of the above
 // live in maintaining-npv-queue-connect-guard.md (kept versioned alongside
 // this script).
+
+// Seventeenth change:
+// npBtn now reliably shows a green "active" look - icon color plus a small
+// bottom dot - whenever NPV is genuinely open, and only then; previously it
+// never visually reflected NPV state at all (always looked the same
+// regardless of open/closed), since setupNpvButton() clones lyBtn's
+// className as a one-time static snapshot at insertion and nothing ever
+// touched npBtn again afterward.
+// a) Added syncNpBtnVisualState(), which toggles a self-owned `.active`
+//    class on npBtn based on userOpenedNPV - the same authorized-open flag
+//    setAuthorizedPanel() already sets synchronously, before Spotify's own
+//    click handling runs, and which is only ever true when NPV specifically
+//    (not Queue or Connect, which share the same panel container and can
+//    briefly cause a mismatch if state is read off the container's
+//    aria-label instead) was the authorized open. It's called from
+//    updateNpvLayoutState() - already the single hook that runs on every
+//    panelGuardObserver tick and on init - so no new observer was needed.
+// b) `.npbtn.active` is styled entirely by this script's own CSS via
+//    GM_addStyle, not by cloning any of Spotify's own hashed Encore
+//    classes: `color:#1db954` for the icon (with a `:hover`/`:focus`
+//    override of the same color, since Spotify's own hover rule on the
+//    cloned Encore button classes would otherwise win and wash the icon
+//    back to its default subdued/white hover color while still "active"),
+//    plus a 4x4px `#1db954` circular dot on `::after` (position:absolute;
+//    bottom:0; left:50%) matching the small dot Spotify itself shows under
+//    lyBtn while its own panel is open - both values taken from a live
+//    DevTools capture of Spotify's actual CSS rather than guessed.
+//    `position:relative` was added on `.npbtn` itself so the dot's
+//    `position:absolute` has something to anchor bottom/left against - a
+//    plain <button> is position:static by default, unlike lyBtn which gets
+//    that for free from Spotify's own Encore classes. Ported from
+//    Spotifuck Mobile's original npBtn implementation
+//    (java_src/p032R0/C0363e.java, clickNP()) for the overall approach of a
+//    self-owned `.active` class rather than Spotify's own classes, which
+//    are hashed and can silently change (and break the sync) on any
+//    Spotify deploy.
+// c) setupNpvButton()'s initial clone of lyBtn's className originally strips
+//    two of Spotify's own hashed Encore classes (kept as
+//    SPOTIFY_LYBTN_STATE_CLASSES) defensively - if lyBtn happens to be
+//    transiently carrying them at clone-time (Spotify's own hydration
+//    race), Spotify's stylesheet would still apply its own styling for
+//    them to npBtn since the classes would physically be present, even
+//    though nothing in this script reads them for state anymore. Superseded
+//    by the Eighteenth change below.
+
+// Eighteenth change:
+// npBtn's defense against the hydration-race leak described in point (c)
+// above is now enforced at the CSS property level instead of by denylisting
+// Spotify's two hashed class names, so it no longer depends on those names
+// staying the same across Spotify deploys.
+// a) A live classList capture of lyBtn in both states confirmed the leak
+//    surface exactly: Spotify's "open" state is precisely the two classes
+//    SPOTIFY_LYBTN_STATE_CLASSES already named, added on top of an otherwise
+//    identical closed-state list. That same capture also showed two other
+//    20-char hashed classes present in both states - structural/instance
+//    styling that setupNpvButton()'s clone still needs for its free sizing
+//    and hover behavior, not state that should be stripped. That rules out
+//    matching by shape (e.g. any 20-char hashed class) as a more durable
+//    alternative to the old literal-string list: it can't tell the two real
+//    state classes apart from these other same-shaped ones by name alone,
+//    so it would have stripped styling npBtn is supposed to keep.
+// b) Instead, `.npbtn:not(.active)` now pins the two properties those hashed
+//    classes are actually capable of setting - icon color and the ::after
+//    dot - directly, with !important: color falls back to Spotify's own
+//    subdued/base text-color tokens for the resting/hover look, and the dot
+//    is forced off via `content: none`. Scoping this to `:not(.active)`
+//    means it only ever overrides a leaked state class; it never fights the
+//    `.active` rules below it, and it never touches the size, padding,
+//    hover-circle background, or focus ring still coming for free from the
+//    rest of lyBtn's cloned classes. [`.active:hover`/`:focus` also forces
+//    color with !important, but that's unchanged carryover from the
+//    Seventeenth entry's point (b) - it exists to beat Spotify's own hover
+//    rule while active, not to guard against a leaked class, and isn't part
+//    of this change.]
+// c) The `.active::after` dot itself still gets its color from a plain
+//    `background-color: #1db954`, with no !important needed. npBtn's
+//    className is set once, at clone/insertion time, and never modified
+//    again afterward (unchanged since the Seventeenth change). If NPV is
+//    closed at that moment - the overwhelmingly common case - lyBtn isn't
+//    carrying the two hashed classes yet, so npBtn never has them, and
+//    there's nothing for `.active`'s rules to conflict with. If NPV
+//    happened to be open at that exact moment (the actual hydration race),
+//    npBtn would carry those classes permanently, but a later `.active`
+//    toggle and Spotify's frozen-in leaked rule would then both be asserting
+//    the same green dot - agreement, not a fight. The only state that can
+//    ever see a leaked class contradicting the correct look is the
+//    non-active one, which point (b) already covers with !important.
+// d) With (a)-(c) in place, setupNpvButton()'s clone no longer strips
+//    SPOTIFY_LYBTN_STATE_CLASSES from lyBtn's className - the constant and
+//    the strip call were removed, since a leaked class can now be physically
+//    present on npBtn without being able to paint anything.
 
 
 // --- Per-site visual premium spoof toggles ---
@@ -1570,6 +1661,50 @@ if (HOST_IS_OPEN) {
             || panelContainer.classList.contains('NowPlayingView');
     }
 
+    // npBtn's green "active" look (icon color + bottom dot) is driven off
+    // userOpenedNPV rather than isNpvOpen() - see the Seventeenth change entry
+    // above for why (isNpvOpen()'s aria-label check can't reliably tell "NPV
+    // specifically" apart from a freshly-opening Queue/Connect on the first
+    // tick, the same stale-label issue the Sixteenth change entry's point (b)
+    // already worked around for the guard's close decision). The
+    // `.npbtn:not(.active)` rules below are the Eighteenth change entry's
+    // property-override defense, replacing SPOTIFY_LYBTN_STATE_CLASSES - see
+    // that entry above for the full reasoning.
+    GM_addStyle(`
+        .npbtn { position: relative; }
+        .npbtn:not(.active) {
+            color: var(--text-subdued, #b3b3b3) !important;
+        }
+        .npbtn:not(.active)::after {
+            content: none !important;
+        }
+        .npbtn:not(.active):hover,
+        .npbtn:not(.active):focus {
+            color: var(--text-base, #fff) !important;
+        }
+        .npbtn.active { color: #1db954; }
+        .npbtn.active:hover, .npbtn.active:focus {
+            color: #1db954 !important;
+        }
+        .npbtn.active::after {
+            content: "";
+            background-color: #1db954;
+            border-radius: 50%;
+            width: 4px;
+            height: 4px;
+            display: block;
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translate(-50%);
+        }
+    `);
+    function syncNpBtnVisualState() {
+        const npBtn = document.querySelector('.npbtn');
+        if (!npBtn) return;
+        npBtn.classList.toggle('active', userOpenedNPV);
+    }
+
     // Same shared-container pattern as isNpvOpen() above, checking the container's own
     // aria-label for the other two panel types (confirmed via DOM capture - see
     // connect_to_a_device__nowplayingview__queue_selectors.txt - "Queue" and "Connect
@@ -1711,12 +1846,18 @@ if (HOST_IS_OPEN) {
         // Clone lyBtn's own classes (Spotify's real Encore button classes) so npBtn
         // automatically gets the same size/padding/hover/scale as every other
         // player-bar button instead of rendering as an unstyled native <button>.
+        // No defensive strip needed here anymore - see the Eighteenth change entry
+        // above: `.npbtn:not(.active)` now pins color/::after with !important, so
+        // it no longer matters whether lyBtn's hashed "open" state classes happen
+        // to be physically present on npBtn at clone-time.
         npBtn.className = lyBtn.className.replace('fuckd-npv', '').trim() + ' npbtn';
         npBtn.setAttribute('aria-label', 'Now Playing view');
         npBtn.title = 'Now Playing view';
         npBtn.innerHTML = `<svg data-encore-id="icon" role="img" aria-hidden="true" viewBox="0 0 16 16" style="width:16px;height:16px;fill:currentColor;"><rect x="1.25" y="0.75" width="13.5" height="14.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6 4.5v7l5.5-3.5z" fill="currentColor"/></svg>`;
         npBtn.addEventListener('click', () => clickNP('npBtn-click'));
         lyBtn.parentNode.insertBefore(npBtn, lyBtn);
+        syncNpBtnVisualState(); // set the correct initial look immediately, in case
+        // NPV is (unusually) already open-and-authorized at insertion time.
 
         // Make sure nothing is left open from before npBtn/album-art/Queue/Connect were
         // wired up. Uses the same isAnyPanelOpen()/isAnyPanelAuthorized() combo as
@@ -1862,6 +2003,7 @@ if (HOST_IS_OPEN) {
     }
     function updateNpvLayoutState() {
         document.documentElement.classList.toggle('fuckd-panel-open', isAnyPanelOpen());
+        syncNpBtnVisualState();
     }
     updateNpvLayoutState(); // reflect default (closed) state before the panel even exists
 
