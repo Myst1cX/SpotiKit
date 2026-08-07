@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotifuck Desktop
 // @namespace    https://github.com/Myst1cX/SpotiKit
-// @version      7.0.18
+// @version      7.0.19
 // @description  SpotiKit - Visual premium UI overlay for Spotify and ad banner blocking. Amoled theme. Restores the old Now Playing View button.
 // @author       kit_fogos, Myst1cX (fork)
 // @match        *://open.spotify.com/*
@@ -558,6 +558,24 @@
 //    the strip call were removed, since a leaked class can now be physically
 //    present on npBtn without being able to paint anything.
 
+// Nineteenth change:
+// Ported Spotifuck Mobile's window.AndBridge guard (added v7.19, ported the
+// v7.21 which excludes the forceEnglish() function. window.AndBridge only ever exists inside
+// the Spotifuck Android app's WebView (added via addJavascriptInterface,
+// never present in a real desktop browser/userscript-manager context, which
+// is the only place this script itself runs) - added defensively in case
+// this file's forceEnglish() ever ends up loaded inside that WebView too,
+// same as Spotifuck Mobile's own copy already is. When present, it signals
+// that app's native-side fix (item 22, Locale.setDefault(new Locale("en"))
+// in MainActivity) is already forcing Accept-Language: en at the HTTP layer
+// for every request, which structurally covers the navigator.language/
+// languages spoof and the www.spotify.com region-path redirect just below -
+// so window.AndBridge now gates just those two, matching Spotifuck Mobile
+// v7.21 (not its original v7.19, which also gated the account-setting flip;
+// v7.21 found that skipping the flip inside the app allows user to change their 
+// interface language and reload the page which we don't want because we use
+// certain English selectors to accomplish some of the modifications.
+
 
 // --- Per-site visual premium spoof toggles ---
 // Declared at module scope (not inside either IIFE below) because both the
@@ -847,6 +865,32 @@ if (typeof GM_registerMenuCommand === 'function') {
     }
 
     function forceEnglish() {
+        // Ported from Spotifuck Mobile (v7.19/v7.21). The Spotifuck Android app
+        // (the WebView wrapper Spotifuck Mobile's userscript targets) has a
+        // native-side fix (item 22, Locale.setDefault(new Locale("en")) in
+        // MainActivity's onCreate()/onResume()) that makes Chromium WebView derive
+        // Accept-Language: en for every request it makes at the HTTP layer,
+        // structurally covering the navigator.language/languages spoof and the
+        // www.spotify.com region-path redirect just below - so running this
+        // script's own JS-layer spoof/redirect alongside it is redundant there.
+        // window.AndBridge only ever exists inside that app's WebView
+        // (addJavascriptInterface-only, never present in a real desktop
+        // browser/userscript-manager context, which is the only place SpotiwebJS
+        // itself runs) - kept here regardless in case this file's forceEnglish()
+        // ever ends up loaded inside that WebView too, same as Spotifuck Mobile's.
+        //
+        // v7.19 originally had this guard cover the account-setting iframe flip
+        // (forceEnglishAccountSetting(), below via runIntlCorrectionOnceReady()) too,
+        // on the theory that Accept-Language: en on that hidden iframe's request would
+        // make Spotify itself report the account language as English and avoid the
+        // false "not English" read that caused the reload-on-login bug. In practice
+        // the whole WebView is indeed rendered in English, but skipping the flip inside
+        // the app allows user to change their interface language and reload the page which 
+        // we don't want because we use certain English selectors to accomplish some of the modifications.
+        const nativeForceEnActive = window.AndBridge && typeof window.AndBridge.isLoggedIn === 'function';
+        if (nativeForceEnActive) {
+            dbg('forceEnglish: skipping navigator.language spoof + region redirect', 'window.AndBridge present', { reason: 'native app-layer ForceEn (item 22) already active - Accept-Language covers these at the HTTP layer; account-setting flip below still runs' });
+        } else {
         dbg('forceEnglish: spoofing navigator.language', 'navigator.language/languages', { value: 'en-US' });
         try {
             Object.defineProperty(navigator, 'language', { get: () => 'en-US', configurable: true });
@@ -898,6 +942,7 @@ if (typeof GM_registerMenuCommand === 'function') {
                 }
             }
             }
+        }
         }
 
         // The /intl-xx/ URL check and account-setting flip used to run right
