@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotifuck Desktop
 // @namespace    https://github.com/Myst1cX/SpotiKit
-// @version      7.0.20
+// @version      7.0.21
 // @description  SpotiKit - Visual premium UI overlay for Spotify and ad banner blocking. Amoled theme. Restores the old Now Playing View button.
 // @author       kit_fogos, Myst1cX (fork)
 // @match        *://open.spotify.com/*
@@ -603,6 +603,17 @@
 // The `@grant GM_addStyle` line has been dropped from this script's own
 // metadata block above, since nothing here calls it anymore.
 
+// Twenty-first change:
+// The Nineteenth change's window.AndBridge guard was gating both the
+// navigator.language/languages spoof AND the www.spotify.com region-path
+// redirect. Ungated the redirect - only the navigator.language spoof is
+// still skipped under window.AndBridge now. Item 22's native
+// Locale.setDefault("en") is process-wide but there's no way to confirm
+// every page rendered inside the app's WebView (e.g. an Accounts/login page)
+// actually went through MainActivity's onCreate()/onResume() first, so this
+// redirect now runs unconditionally as a cheap safety net - opening pages
+// like Accounts inside the WebView should now land in English.
+
 
 // --- Per-site visual premium spoof toggles ---
 // Declared at module scope (not inside either IIFE below) because both the
@@ -911,14 +922,26 @@ if (typeof GM_registerMenuCommand === 'function') {
         // native-side fix (item 22, Locale.setDefault(new Locale("en")) in
         // MainActivity's onCreate()/onResume()) that makes Chromium WebView derive
         // Accept-Language: en for every request it makes at the HTTP layer,
-        // structurally covering the navigator.language/languages spoof and the
-        // www.spotify.com region-path redirect just below - so running this
-        // script's own JS-layer spoof/redirect alongside it is redundant there.
-        // window.AndBridge only ever exists inside that app's WebView
+        // structurally covering the navigator.language/languages spoof just below -
+        // so running this script's own JS-layer spoof alongside it is redundant
+        // there. window.AndBridge only ever exists inside that app's WebView
         // (addJavascriptInterface-only, never present in a real desktop
         // browser/userscript-manager context, which is the only place SpotiwebJS
         // itself runs) - kept here regardless in case this file's forceEnglish()
         // ever ends up loaded inside that WebView too, same as Spotifuck Mobile's.
+        //
+        // The www.spotify.com region-path redirect below (and the account-setting
+        // flip further down) deliberately do NOT get skipped here, even though
+        // Locale.setDefault() is process-wide and should in principle cover any
+        // WebView created anywhere in the app: we don't have a way to independently
+        // confirm every code path that can render a Spotify page (e.g. an
+        // account/auth flow that Spotify or Android itself hands off somewhere the
+        // native override wasn't in effect first) actually goes through
+        // MainActivity's own onCreate()/onResume() before rendering. window.AndBridge
+        // being present tells us the native fix *should* be active, not that it
+        // definitely covers the specific page currently loaded - so this redirect
+        // stays unconditional as a cheap, harmless-if-redundant safety net rather
+        // than trusting that guarantee.
         //
         // v7.19 originally had this guard cover the account-setting iframe flip
         // (forceEnglishAccountSetting(), below via runIntlCorrectionOnceReady()) too,
@@ -930,13 +953,14 @@ if (typeof GM_registerMenuCommand === 'function') {
         // we don't want because we use certain English selectors to accomplish some of the modifications.
         const nativeForceEnActive = window.AndBridge && typeof window.AndBridge.isLoggedIn === 'function';
         if (nativeForceEnActive) {
-            dbg('forceEnglish: skipping navigator.language spoof + region redirect', 'window.AndBridge present', { reason: 'native app-layer ForceEn (item 22) already active - Accept-Language covers these at the HTTP layer; account-setting flip below still runs' });
+            dbg('forceEnglish: skipping navigator.language spoof', 'window.AndBridge present', { reason: 'native app-layer ForceEn (item 22) already active - Accept-Language covers navigator.language at the HTTP layer; region-path redirect below still runs unconditionally, account-setting flip below still runs' });
         } else {
         dbg('forceEnglish: spoofing navigator.language', 'navigator.language/languages', { value: 'en-US' });
         try {
             Object.defineProperty(navigator, 'language', { get: () => 'en-US', configurable: true });
             Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'], configurable: true });
         } catch (e) {}
+        }
 
         if (location.hostname === 'www.spotify.com') {
             // Gated behind the same www.spotify.com toggle
@@ -946,7 +970,10 @@ if (typeof GM_registerMenuCommand === 'function') {
             // (www.spotify.com)" off correctly stopped/reverted page
             // modifications but still silently redirected e.g. /si-sl/ to
             // /si-en/ - the one piece of www.spotify.com behavior that
-            // wasn't actually off when the toggle said it was.
+            // wasn't actually off when the toggle said it was. NOT gated
+            // behind nativeForceEnActive/window.AndBridge - see comment
+            // above forceEnglish() for why this one stays unconditional even
+            // inside the app.
             if (!premiumSpoofEnabledHere()) {
                 dbg('forceEnglish: skipping region-path redirect', location.pathname, { reason: 'Visual Premium Spoof (www.spotify.com) is off' });
             } else {
@@ -983,7 +1010,6 @@ if (typeof GM_registerMenuCommand === 'function') {
                 }
             }
             }
-        }
         }
 
         // The /intl-xx/ URL check and account-setting flip used to run right
