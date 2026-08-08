@@ -1,13 +1,12 @@
 // ==UserScript==
 // @name         Spotifuck Desktop
 // @namespace    https://github.com/Myst1cX/SpotiKit
-// @version      7.0.19
+// @version      7.0.20
 // @description  SpotiKit - Visual premium UI overlay for Spotify and ad banner blocking. Amoled theme. Restores the old Now Playing View button.
 // @author       kit_fogos, Myst1cX (fork)
 // @match        *://open.spotify.com/*
 // @match        *://www.spotify.com/*
 // @match        *://payments.spotify.com/*
-// @grant        GM_addStyle
 // @grant        GM_registerMenuCommand
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -299,6 +298,8 @@
 // blanket fix at the source rather than Mobile's narrower per-surface one,
 // appropriate since desktop lacks the overlay code Mobile's fix piggybacks
 // on.
+// [As of the Twentieth change: this block's GM_addStyle call was replaced
+// with a plain <style>-element injection - see that entry for why.]
 
 // Twelfth change: A feature I later scrapped (ignore)
 
@@ -502,6 +503,8 @@
 //    self-owned `.active` class rather than Spotify's own classes, which
 //    are hashed and can silently change (and break the sync) on any
 //    Spotify deploy.
+//    [As of the Twentieth change: this GM_addStyle call was replaced with a
+//    plain <style>-element injection - see that entry for why.]
 // c) setupNpvButton()'s initial clone of lyBtn's className originally strips
 //    two of Spotify's own hashed Encore classes (kept as
 //    SPOTIFY_LYBTN_STATE_CLASSES) defensively - if lyBtn happens to be
@@ -575,6 +578,30 @@
 // v7.21 found that skipping the flip inside the app allows user to change their 
 // interface language and reload the page which we don't want because we use
 // certain English selectors to accomplish some of the modifications.
+
+// Twentieth change:
+// Removed the dependency on GM_addStyle entirely - the three CSS blocks that
+// used to call it (the .__sp_curr badge, the Eleventh change's AMOLED
+// dark-theme override, and the Eighteenth change's .npbtn active-state
+// styling) now each inject their own <style> element directly:
+// document.createElement('style'), set .textContent to the same CSS,
+// document.head.appendChild(style). This is Spotifuck Mobile's own method
+// (r0/e.java line 204 - see its injectCSS()), ported here rather than
+// relying on GM_addStyle being defined by whatever loader runs this script.
+// Root cause: some loaders' GM-shim layer defines GM_setValue/GM_getValue/
+// GM_notification/etc. but not GM_addStyle, and this script's first
+// GM_addStyle call is the very first executable statement in its opening
+// IIFE - an unguarded top-level call, so if it throws (calling undefined as
+// a function), every statement after it in that block never runs, silently.
+// The .npbtn block sits in a separate function further down and would have
+// failed independently even if the first block were somehow guarded.
+// Spotifuck Mobile itself never hit this because it declares
+// `@grant GM_addStyle` in its own metadata but never actually calls the
+// function anywhere in its body - the grant was always just unused
+// boilerplate there. This script actually calls it, three times, so it
+// needed the real fix rather than just a declared grant.
+// The `@grant GM_addStyle` line has been dropped from this script's own
+// metadata block above, since nothing here calls it anymore.
 
 
 // --- Per-site visual premium spoof toggles ---
@@ -668,7 +695,14 @@ if (typeof GM_registerMenuCommand === 'function') {
     const PINK = '#FFD2D7';
     const GREEN = '#1ed760';
 
-    GM_addStyle(`
+    // GM_addStyle avoided here - ported to the same raw <style>-element
+    // injection Spotifuck Mobile uses (r0/e.java line 204 pattern:
+    // document.createElement('style') + textContent + document.head.appendChild),
+    // rather than depending on GM_addStyle being defined by whatever loader
+    // runs this script.
+    (function() {
+        const s = document.createElement('style');
+        s.textContent = `
         .__sp_curr {
             display:inline-block;
             background:#535353;
@@ -680,7 +714,9 @@ if (typeof GM_registerMenuCommand === 'function') {
             text-transform:uppercase;
             letter-spacing:.4px;
         }
-    `);
+    `;
+        document.head.appendChild(s);
+    })();
 
     // AMOLED pure black mode - ported from Spotifuck Mobile (r0/e.java line 207).
     // Was missing here; the rest of SpotiwebJS ports Spotifuck 1:1 but this
@@ -712,7 +748,10 @@ if (typeof GM_registerMenuCommand === 'function') {
     // (An earlier version of this block also force-set
     // #Desktop_LeftSidebar_Id/.YourLibraryX directly as a belt-and-suspenders
     // measure; removed since !important alone was sufficient.)
-    GM_addStyle(`
+    // GM_addStyle avoided here too, same reason/pattern as the block above.
+    (function() {
+        const s = document.createElement('style');
+        s.textContent = `
         .encore-dark-theme {
             --background-base: #000 !important;
             --background-highlight: #000 !important;
@@ -726,7 +765,9 @@ if (typeof GM_registerMenuCommand === 'function') {
             box-shadow: none;
             border-top: 1px solid #666;
         }
-    `);
+    `;
+        document.head.appendChild(s);
+    })();
 
     const REPLACE = {
         "Spotify Free": "Premium Individual",
@@ -1715,7 +1756,10 @@ if (HOST_IS_OPEN) {
     // `.npbtn:not(.active)` rules below are the Eighteenth change entry's
     // property-override defense, replacing SPOTIFY_LYBTN_STATE_CLASSES - see
     // that entry above for the full reasoning.
-    GM_addStyle(`
+    // GM_addStyle avoided here too, same reason/pattern as the two blocks above.
+    (function() {
+        const s = document.createElement('style');
+        s.textContent = `
         .npbtn { position: relative; }
         .npbtn:not(.active) {
             color: var(--text-subdued, #b3b3b3) !important;
@@ -1743,7 +1787,9 @@ if (HOST_IS_OPEN) {
             left: 50%;
             transform: translate(-50%);
         }
-    `);
+    `;
+        document.head.appendChild(s);
+    })();
     function syncNpBtnVisualState() {
         const npBtn = document.querySelector('.npbtn');
         if (!npBtn) return;
