@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotifuck Desktop
 // @namespace    https://github.com/Myst1cX/SpotiKit
-// @version      7.0.21
+// @version      7.0.22
 // @description  SpotiKit - Visual premium UI overlay for Spotify and ad banner blocking. Amoled theme. Restores the old Now Playing View button.
 // @author       kit_fogos, Myst1cX (fork)
 // @match        *://open.spotify.com/*
@@ -613,6 +613,33 @@
 // actually went through MainActivity's onCreate()/onResume() first, so this
 // redirect now runs unconditionally as a cheap safety net - opening pages
 // like Accounts inside the WebView should now land in English.
+
+// Twenty-second change:
+// Album art button (button[data-testid=cover-art-button]) no longer
+// opened/closed Now Playing View. Cause: setupNpvWidgetTrigger's selector
+// (div[data-testid=now-playing-widget]>div:first-child) was purely
+// positional - Spotify wrapped the art in a real interactive
+// <button data-testid=cover-art-button aria-label="Now playing view">
+// nested inside that div, so the click handling moved onto the button
+// specifically and a listener on the outer div wrapper stopped receiving
+// it (the div itself is still technically "the first child", so the old
+// selector kept matching something, just not the thing that's actually
+// clicked anymore). Solution: target the button directly via its testid
+// (div[data-testid=now-playing-widget] button[data-testid=cover-art-button]),
+// scoped under now-playing-widget so it can't match a same-named button
+// elsewhere.
+//
+// Naming note: now-playing-widget is NOT the Now Playing View (NPV) panel -
+// it's Spotify's own testid for the small now-playing info cluster in the
+// player bar itself (album art thumbnail = its first child, track title/artist
+// text = its second child, favorite/heart button = its last child - see the
+// compact-mode CSS rules further down keyed off those same child positions).
+// NPV is the big panel that OPENS when that first child (the art) gets
+// clicked. The child position that broke here (first child) never changed -
+// what changed is which element inside that first child is actually
+// clickable: previously the div itself, now a real <button> nested inside
+// it. NPV/the panel itself was never touched by this fix, only the trigger
+// that opens it.
 
 
 // --- Per-site visual premium spoof toggles ---
@@ -1986,12 +2013,13 @@ if (HOST_IS_OPEN) {
         dbg('[PanelGuard] setupNpvButton: button inserted', 'button[data-testid="lyrics-button"]', {});
     };
 
-    // The player-bar album art (div[data-testid=now-playing-widget]>div:first-child)
-    // natively TOGGLES the Now Playing view on click - a real, reliable Spotify
-    // affordance. A capture-phase listener sets the authorized-panel state to match
-    // what this click is about to do - open or close, computed from isNpvOpen() same
-    // as clickNP() - strictly before Spotify's own bubble-phase handler runs, so by
-    // the time panelGuardObserver's mutation microtask fires, the flag already reflects
+    // The player-bar album art (button[data-testid=cover-art-button] inside
+    // div[data-testid=now-playing-widget]) natively TOGGLES the Now Playing view on
+    // click - a real, reliable Spotify affordance. A capture-phase listener sets
+    // the authorized-panel state to match what this click is about to do - open or
+    // close, computed from isNpvOpen() same as clickNP() - strictly before
+    // Spotify's own bubble-phase handler runs, so by the time
+    // panelGuardObserver's mutation microtask fires, the flag already reflects
     // the correct state. This must mirror both directions (not just set true): since
     // it's a native toggle, the closing click never goes through our closeNowPlay()
     // (one of the places that resets the flags - panelGuardObserver's stale-flag
@@ -2002,21 +2030,29 @@ if (HOST_IS_OPEN) {
     // block below), so an unconditional `true` here would leave userOpenedNPV stuck
     // true after a close and cause the guard to wrongly trust the next unrelated
     // native open (e.g. a playlist's play button auto-opening NPV).
+    //
+    // Selector was previously div[data-testid=now-playing-widget]>div:first-child,
+    // a purely positional guess. Spotify wrapped the art in a real interactive
+    // button (data-testid=cover-art-button, aria-label="Now playing view") - the
+    // click handling moved onto that button specifically, so a listener on the outer
+    // div wrapper stopped receiving it. Switched to targeting the button directly
+    // via its testid, scoped under now-playing-widget so it can't accidentally match
+    // a same-named button elsewhere on the page.
     const setupNpvWidgetTrigger = () => {
-        const artEl = document.querySelector('div[data-testid="now-playing-widget"]>div:first-child:not(.fuckd-npv-art)');
+        const artEl = document.querySelector('div[data-testid="now-playing-widget"] button[data-testid="cover-art-button"]:not(.fuckd-npv-art)');
         if (!artEl) return;
         artEl.classList.add('fuckd-npv-art');
         artEl.addEventListener('click', () => {
             const willOpen = !isNpvOpen();
             setAuthorizedPanel(willOpen ? 'npv' : null);
-            dbg('[PanelGuard] npvWidget: album art clicked', 'div[data-testid="now-playing-widget"]>div:first-child', {
+            dbg('[PanelGuard] npvWidget: album art clicked', 'button[data-testid="cover-art-button"]', {
                 willOpen,
                 note: willOpen
                     ? 'authorized panel set to npv before Spotify\'s own click handling runs, so panelGuardObserver allows this open'
                     : 'panel was open - this click closes it natively (closeNowPlay() never runs for this path), so the authorized-panel flags are cleared here to keep guard state in sync'
             });
         }, { capture: true });
-        dbg('[PanelGuard] setupNpvWidgetTrigger: listener attached', 'div[data-testid="now-playing-widget"]>div:first-child', {});
+        dbg('[PanelGuard] setupNpvWidgetTrigger: listener attached', 'button[data-testid="cover-art-button"]', {});
     };
 
     // Queue and Connect are now full authorized-opener types, same pattern as the
