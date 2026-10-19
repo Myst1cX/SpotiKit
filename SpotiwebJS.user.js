@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotifuck Desktop
 // @namespace    https://github.com/Myst1cX/SpotiKit
-// @version      7.0.23
+// @version      7.0.24
 // @description  SpotiKit - Visual premium UI overlay for Spotify and ad banner blocking. Amoled theme. Restores the old Now Playing View button.
 // @author       kit_fogos, Myst1cX (fork)
 // @match        *://open.spotify.com/*
@@ -658,6 +658,16 @@
 // npvSetupInterval's existing querySelector('.fuckd-npv-art') stop-check
 // still works unchanged.
 
+// Twenty-fourth change:
+// dbg() output now reaches the Spotifuck app's Logger (app v1.54+). Inside the app
+// GM_registerMenuCommand does nothing, so the "Debug Logging (console)" flag could never
+// be turned on and none of the dbg() lines were ever produced there. dbg() now also
+// forwards its line to AndBridge.dbgt under the tag us.SpotiwebJS whenever the app's
+// Settings > Debug Logging is on, so they show up in Settings > Logger (Source =
+// userscripts, or search tag:us.SpotiwebJS). The console path and the GM flag work as
+// before; in a plain userscript manager (or an app without dbgt) the new code does
+// nothing. No call site changed.
+
 
 // --- Per-site visual premium spoof toggles ---
 // Declared at module scope (not inside either IIFE below) because both the
@@ -698,7 +708,32 @@ function debugLoggingEnabled() {
     try { return typeof GM_getValue === 'function' ? GM_getValue(DEBUG_KEY, false) : false; }
     catch (e) { return false; }
 }
+// --- App Logger bridge ---
+// Inside the Spotifuck app GM_registerMenuCommand is a no-op, so the GM "Debug Logging (console)" flag can
+// never be switched on there and dbg() stayed silent forever. It now also forwards to the app's own log
+// (Settings > Logger) through AndBridge.dbgt, tagged APP_LOG_TAG = "us.<this file's name>" - the same tag
+// the Logger derives from this script's console output - so Source = userscripts shows it. The app gates it
+// (Settings > Debug Logging); appLogOn() asks first so details are not serialized while that is off.
+// Outside the app, or on an app build without dbgt, all of this is a no-op. The console path is unchanged.
+// (Calls AndBridge directly, not window.dbg: this file is eval'd in the global scope and a top-level dbg
+// here would replace the app's window.dbg helper.)
+const APP_LOG_TAG = 'us.SpotiwebJS';
+const appLogOn = () => {
+    try { return !!(window.AndBridge && typeof window.AndBridge.dbgt === 'function' && window.AndBridge.getDebugLogEnabled()); }
+    catch (e) { return false; }
+};
+const appLogText = (v) => {
+    if (v === undefined || v === null || v === '') return '';
+    if (typeof v === 'string') return v;
+    if (v instanceof Error) return v.message;
+    try { return JSON.stringify(v) || String(v); } catch (e) { return String(v); }
+};
+const appLog = (msg) => {
+    try { window.AndBridge.dbgt('l', APP_LOG_TAG, msg); } catch (e) {}
+};
+
 function dbg(event, selector, details) {
+    if (appLogOn()) appLog(event + ' | selector: ' + selector + (details ? ' | ' + appLogText(details) : ''));
     if (!debugLoggingEnabled()) return;
     console.log(`%c[SPFDBG] ${event}`, 'color:#1ed760;font-weight:bold;', 'selector:', selector, details || '');
 }
