@@ -659,7 +659,7 @@
 // still works unchanged.
 
 // Twenty-fourth change:
-// dbg() output now reaches the Spotifuck app's Logger (app v1.54+). Inside the app
+// dbg() output now reaches the Spotifuck app's Logger (app v1.52+). Inside the app
 // GM_registerMenuCommand does nothing, so the "Debug Logging (console)" flag could never
 // be turned on and none of the dbg() lines were ever produced there. dbg() now also
 // forwards its line to AndBridge.dbgt under the tag us.SpotiwebJS whenever the app's
