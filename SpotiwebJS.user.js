@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotifuck Desktop
 // @namespace    https://github.com/Myst1cX/SpotiKit
-// @version      7.0.24
+// @version      7.0.25
 // @description  SpotiKit - Visual premium UI overlay for Spotify and ad banner blocking. Amoled theme. Restores the old Now Playing View button.
 // @author       kit_fogos, Myst1cX (fork)
 // @match        *://open.spotify.com/*
@@ -668,6 +668,43 @@
 // before; in a plain userscript manager (or an app without dbgt) the new code does
 // nothing. No call site changed.
 
+// Twenty-fifth change - ported from Spotifuck Mobile v7.34 / v7.32 c):
+// The premium spoof no longer wakes an observer on every DOM change of every matched page, and
+// forcing English no longer depends on the spoof toggle. Per page (each follows its toggle:
+// open.spotify.com -> "Visual Premium Spoof (open.spotify.com)", www.spotify.com and
+// payments.spotify.com -> "Visual Premium Spoof (www.spotify.com)"; toggling reloads):
+// - open.spotify.com: CSS only. The upgrade button ("Explore Premium"), the upgrade-menu link
+//   (appears after the avatar is clicked), the Install App link (#global-nav-bar a[href="/download"])
+//   and the whole page footer (div.main-view-container__mh-footer-container, which holds the
+//   "Spotify Plans" list; same as Mobile) are hidden by one display:none rule injected as soon as
+//   <head> exists. No observer, no timed pass, no text replacement. Each hidden element is reported
+//   once through logChange() (load + 300 ms / 1200 ms + 300 ms after each click + when the
+//   "Show everything replaced so far" list is printed), so it still shows up in that list and in
+//   the app Logger. The hiding does not depend on the logging.
+// - payments.spotify.com checkout: one CSS cover plus one "Back to Spotify" link (installCover()).
+//   Every direct child of <body> except the link is display:none; the two text lines are
+//   body::before / body::after. No JS pass, no observer, no click blocker (a hidden element can't be
+//   clicked). The link is appended once at DOMContentLoaded.
+// - www.spotify.com plan pages (/premium/, /duo/, /student/, /family/): same cover with the line
+//   "You dont need Spotify Premium. Trust me.". The whole page is covered (header and footer too),
+//   the button reads "Back to Spotify" and goes to https://open.spotify.com/. No JS pass, no observer.
+// - other www.spotify.com pages: the JS pass (text, plan card, banner, buttons) runs at 300 ms, with
+//   a retry at 1200 ms only if the first pass changed nothing (page not rendered yet), then the
+//   observer (400 ms debounce) for content added later. Our own edits' mutation records are dropped
+//   after each pass (flushOwnMutations()), so they no longer trigger another pass. The observer is
+//   not created at all on pages that don't use the JS pass or when the www toggle is off.
+// - add-new-card-button blocker (www.spotify.com account pages): its observer is only created on
+//   /account/payment-methods/ and /account/saved-payment-cards/, with the www toggle on.
+// - forceEnglish(): the www.spotify.com region-path redirect (/xx-yy/ with a non-English language
+//   code -> English path) no longer checks the "Visual Premium Spoof (www.spotify.com)" toggle. It
+//   runs whether the toggle is on or off, like the /intl-xx/ strip and the account-language flip.
+// - The open.spotify.com ad-slot remover (whole-DOM rescan on every mutation, did not remove ads
+//   reliably) is gone.
+// - observeBody() / whenHeadReady() (document-start safety, same as Mobile): every observer on
+//   document.body (premium, card blocker, panel guard) and every CSS injection into <head> now waits
+//   for the element to exist, so a missing <body>/<head> at document-start can no longer abort the
+//   script.
+
 
 // --- Per-site visual premium spoof toggles ---
 // Declared at module scope (not inside either IIFE below) because both the
@@ -680,6 +717,37 @@ const SPOOF_OPEN_KEY = 'spotiweb_premSpoofOpen';
 const SPOOF_WWW_KEY = 'spotiweb_premSpoofWWW';
 const HOST_IS_OPEN = location.hostname === 'open.spotify.com';
 const HOST_IS_WWW = location.hostname === 'www.spotify.com' || location.hostname === 'payments.spotify.com';
+const HOST_IS_PAY = location.hostname === 'payments.spotify.com';   // checkout cover is CSS + one link, no JS pass (see installCover())
+// www.spotify.com plan purchase pages, evaluated once at load (every www route is a full page load).
+const HOST_IS_PLAN = HOST_IS_WWW && !HOST_IS_PAY && /\/premium\/|\/duo\/|\/student\/|\/family\//.test(location.href);
+
+// document-start safety: <body>/<head> may not exist yet when this runs. Observing a null body throws
+// and aborts the rest of the script, so observeBody() defers .observe() until <body> exists, and
+// whenHeadReady() runs a callback the moment <head> is inserted (typically within a millisecond or two).
+function observeBody(observer, options) {
+    if (document.body) {
+        observer.observe(document.body, options);
+    } else {
+        document.addEventListener('DOMContentLoaded', () => {
+            observer.observe(document.body, options);
+        }, { once: true });
+    }
+}
+function whenHeadReady(callback) {
+    if (document.head) { callback(); return; }
+    const root = document.documentElement;
+    if (!root) {
+        requestAnimationFrame(() => whenHeadReady(callback));
+        return;
+    }
+    const observer = new MutationObserver(() => {
+        if (document.head) {
+            observer.disconnect();
+            callback();
+        }
+    });
+    observer.observe(root, { childList: true });
+}
 
 function getFlag(key) {
     try { return typeof GM_getValue === 'function' ? GM_getValue(key, true) : true; }
@@ -805,7 +873,7 @@ if (typeof GM_registerMenuCommand === 'function') {
             letter-spacing:.4px;
         }
     `;
-        document.head.appendChild(s);
+        whenHeadReady(() => document.head.appendChild(s));
     })();
 
     // AMOLED pure black mode - ported from Spotifuck Mobile (r0/e.java line 207).
@@ -856,7 +924,7 @@ if (typeof GM_registerMenuCommand === 'function') {
             border-top: 1px solid #666;
         }
     `;
-        document.head.appendChild(s);
+        whenHeadReady(() => document.head.appendChild(s));
     })();
 
     const REPLACE = {
@@ -877,8 +945,10 @@ if (typeof GM_registerMenuCommand === 'function') {
     };
 
     const replacementLog = new Map();
+    let premChangeCount = 0;  // bumped on every recorded change; premiumPass() compares it to know if a pass changed anything
 
     function logChange(selector, from, to) {
+        premChangeCount++;
         dbg('logChange: replacement recorded', selector, { from, to });
         const key = `${selector}\u0000${from}\u0000${to}`;
         const existing = replacementLog.get(key);
@@ -889,7 +959,30 @@ if (typeof GM_registerMenuCommand === 'function') {
         }
     }
 
+    // open.spotify.com elements hidden by CSS (rule injected further down) instead of by an observer.
+    // CSS hides silently, so logCssHidden() reports each matching element once through logChange().
+    const OPEN_HIDE_SELECTORS = [
+        '[data-testid="upgrade-button"]',
+        'a[href*="premium/?ref=web_loggedin_upgrade_menu"]',
+        '#global-nav-bar a[href="/download"]',
+        'div.main-view-container__mh-footer-container',
+    ];
+    const cssHiddenSeen = new WeakSet();
+    function logCssHidden() {
+        if (!HOST_IS_OPEN || !premiumSpoofEnabledHere()) return;
+        for (const sel of OPEN_HIDE_SELECTORS) {
+            let els = [];
+            try { els = document.querySelectorAll(sel); } catch (e) {}
+            els.forEach(el => {
+                if (cssHiddenSeen.has(el)) return;
+                cssHiddenSeen.add(el);
+                logChange(sel, (el.textContent || '').trim() || '(element)', '(hidden via CSS)');
+            });
+        }
+    }
+
     printReplacementLog = function() {
+        logCssHidden();
         if (replacementLog.size === 0) {
             console.log('[SpotiKit] Nothing has been replaced yet.');
             return;
@@ -1042,20 +1135,11 @@ if (typeof GM_registerMenuCommand === 'function') {
         }
 
         if (location.hostname === 'www.spotify.com') {
-            // Gated behind the same www.spotify.com toggle
-            // (premiumSpoofEnabledHere()) as everything else scoped to this
-            // host. Previously this redirect ran unconditionally regardless
-            // of the toggle, so turning "Visual Premium Spoof
-            // (www.spotify.com)" off correctly stopped/reverted page
-            // modifications but still silently redirected e.g. /si-sl/ to
-            // /si-en/ - the one piece of www.spotify.com behavior that
-            // wasn't actually off when the toggle said it was. NOT gated
-            // behind nativeForceEnActive/window.AndBridge - see comment
+            // Independent of the "Visual Premium Spoof" toggles (that is the
+            // appearance spoof; forcing English is a separate job). Also NOT
+            // gated behind nativeForceEnActive/window.AndBridge - see comment
             // above forceEnglish() for why this one stays unconditional even
             // inside the app.
-            if (!premiumSpoofEnabledHere()) {
-                dbg('forceEnglish: skipping region-path redirect', location.pathname, { reason: 'Visual Premium Spoof (www.spotify.com) is off' });
-            } else {
             // Trust the language suffix when the URL has one (xx-yy, e.g.
             // /si-sl/, /de-en/, /hk-zh/) - Spotify's own site consistently
             // uses a 2-letter language code there, so `yy !== 'en'` is a
@@ -1087,7 +1171,6 @@ if (typeof GM_registerMenuCommand === 'function') {
                     location.replace(location.origin + target + location.search + location.hash);
                     return;
                 }
-            }
             }
         }
 
@@ -1579,66 +1662,45 @@ if (typeof GM_registerMenuCommand === 'function') {
             premiumBanner.appendChild(right);
         }
 
-        if (/\/premium\/|\/duo\/|\/student\/|\/family\//.test(window.location.href) && !document.querySelector('.__sp_premium_done')) {
-            logChange('main / #__next (plan purchase page)', '(original plan page content)', '"You dont need Premium" overlay');
-            const main = document.querySelector('main') || document.getElementById('__next') || document.body;
-            const wrapper = document.createElement('div');
-            wrapper.className = '__sp_premium_done';
-            wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px;background:#121212;color:#fff;';
-            wrapper.innerHTML = `
-                <h1 style="font-size:32px;font-weight:700;margin-bottom:16px;color:#fff;">You dont need Spotify Premium. Trust me.</h1>
-                <a href="https://www.spotify.com/" style="display:inline-block;padding:14px 40px;background:#1ed760;color:#000;border-radius:20px;font-weight:700;font-size:16px;text-decoration:none;cursor:pointer;">Back to home</a>
-            `;
-            main.innerHTML = '';
-            main.appendChild(wrapper);
-        }
-
-        if (window.location.hostname === 'payments.spotify.com' && !document.querySelector('.__sp_pay_done')) {
-            logChange('main / #root (payments page)', '(original checkout page content)', '"DONT WASTE YOUR MONEY" overlay');
-            const main = document.querySelector('main') || document.getElementById('root') || document.body;
-            const wrapper = document.createElement('div');
-            wrapper.className = '__sp_pay_done';
-            wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:40px;background:#121212;color:#fff;';
-            wrapper.innerHTML = `
-                <h1 style="font-size:36px;font-weight:700;margin-bottom:16px;color:#fff;">DONT WASTE YOUR MONEY ON SPOTIFY</h1>
-                <p style="font-size:18px;margin-bottom:24px;color:#b3b3b3;">Dont give them a cent. Use Spotifuck for free.</p>
-                <a href="https://open.spotify.com/" style="display:inline-block;padding:14px 40px;background:#1ed760;color:#000;border-radius:20px;font-weight:700;font-size:16px;text-decoration:none;cursor:pointer;">Back to free Spotify</a>
-            `;
-            main.innerHTML = '';
-            main.appendChild(wrapper);
-            // [data-testid*="pay"] and [data-testid*="checkout"] don't catch
-            // everything - e.g. data-testid="add-new-card-button" contains
-            // neither substring. Adding it as an exact match rather than
-            // widening to [data-testid*="card"], since that broader pattern
-            // would also match unrelated things like a "discard-button"
-            // testid (the substring "card-button" sits inside "discard-
-            // button" too).
-            const BLOCK_SELECTOR = 'form, button[type="submit"], [data-testid*="pay"], [data-testid*="checkout"], [data-testid="add-new-card-button"]';
-            document.querySelectorAll(BLOCK_SELECTOR).forEach(el => {
-                el.onclick = e => {
-                    dbg('payments page blocker: clicked', BLOCK_SELECTOR, {
-                        'element tag': el.tagName, action: 'preventDefault + stopPropagation (click is a no-op)'
-                    });
-                    e.preventDefault(); e.stopPropagation();
-                };
-            });
-        }
+        // The plan-page and payments.spotify.com covers are no longer built here (see installCover() below).
     }
 
     forceEnglish();
 
-    // Single gated entry point: both the timed passes below and the mutation
-    // observer funnel through this so premiumSpoofEnabledHere() is the one
-    // switch that turns the whole spoof pass on/off for the current host.
+    // The JS pass (text / buttons / banner) runs on www.spotify.com except the plan pages.
+    // open.spotify.com, payments.spotify.com and the plan pages are handled by CSS (see below).
+    const JS_SPOOF_HERE = HOST_IS_WWW && !HOST_IS_PAY && !HOST_IS_PLAN;
+
+    // Drops the mutation records our own edits just queued (nodeValue / textContent / inserted nodes).
+    // Without this every pass woke the observer again, which ran another pass that found nothing new.
+    function flushOwnMutations() {
+        if (mainObserver) mainObserver.takeRecords();
+    }
+
+    // Gated entry point for the timed pass below. handleMutations() checks the same
+    // premiumSpoofEnabledHere() toggle itself. Returns null if gated off, otherwise whether the pass
+    // changed anything (premChangeCount moved).
     function premiumPass(changedRoot) {
-        if (!premiumSpoofEnabledHere()) return;
+        if (!JS_SPOOF_HERE || !premiumSpoofEnabledHere()) return null;
+        const before = premChangeCount;
         if (changedRoot) scanText(changedRoot);
         else scanText(document.body);
         runPremium();
+        flushOwnMutations();
+        return premChangeCount !== before;
     }
 
-    setTimeout(() => premiumPass(document.body), 300);
-    setTimeout(() => premiumPass(document.body), 1200);
+    // First pass at 300 ms. The second (1200 ms before) now only happens if the first found nothing
+    // to change, i.e. the page had not rendered yet; if the first pass already changed things the page
+    // is showing the spoofed text and later additions are caught by the observer.
+    if (JS_SPOOF_HERE) {
+        setTimeout(() => {
+            if (premiumPass(document.body) === false) {
+                dbg('premiumPass: nothing to change at 300 ms, retrying once', 'document.body', {});
+                setTimeout(() => premiumPass(document.body), 900);
+            }
+        }, 300);
+    }
 
     let timer;
     let pendingNodes = new Set();
@@ -1668,13 +1730,19 @@ if (typeof GM_registerMenuCommand === 'function') {
             pendingTextNodes.forEach(node => applyReplacements(node));
             pendingTextNodes.clear();
             runPremium();
+            flushOwnMutations();
         }, 400);
     }
 
     function startObserver() {
         if (mainObserver) mainObserver.disconnect();
+        // Toggles reload the page, so the host / toggle state is fixed for this load.
+        if (!JS_SPOOF_HERE || !premiumSpoofEnabledHere()) {
+            dbg('startObserver: not started', 'document.body', { host: location.hostname, spoofOn: premiumSpoofEnabledHere() });
+            return;
+        }
         mainObserver = new MutationObserver(handleMutations);
-        mainObserver.observe(document.body, {
+        observeBody(mainObserver, {
             childList: true,
             subtree: true,
             characterData: true,
@@ -1683,54 +1751,105 @@ if (typeof GM_registerMenuCommand === 'function') {
     }
 
     startObserver();
-})();
 
+    // open.spotify.com - hide the upgrade elements with CSS instead of observer logic (list: OPEN_HIDE_SELECTORS).
+    // CSS hides silently, so logCssHidden() reports each matching element once, at the two load timings
+    // and shortly after each click (the upgrade-menu link only appears after the avatar is clicked).
+    // No observer, nothing runs in the background, and the hiding does not depend on the logging.
+    if (HOST_IS_OPEN && premiumSpoofEnabledHere()) {
+        whenHeadReady(() => {
+            const st = document.createElement('style');
+            st.id = 'spf-open-spoof-css';
+            st.textContent = OPEN_HIDE_SELECTORS.join(',') + '{display:none!important}';
+            document.head.appendChild(st);
+            dbg('open.spotify.com spoof CSS injected', OPEN_HIDE_SELECTORS.join(', '), { action: 'display:none' });
+        });
+        setTimeout(logCssHidden, 300);
+        setTimeout(logCssHidden, 1200);
+        let cssLogTimer;
+        document.addEventListener('click', () => {
+            clearTimeout(cssLogTimer);
+            cssLogTimer = setTimeout(logCssHidden, 300);
+        }, { capture: true, passive: true });
+    }
 
-(function() {
-    'use strict';
-
-    // Real DOM removal of ad-banner containers on the free/ad-supported tier -
-    // this is ordinary ad-block behavior (comparable to a standard ad-blocker
-    // filter rule), not a premium-entitlement bypass: it can't touch anything
-    // server-enforced like bitrate, offline downloads, or skip limits.
-    // Scoped to open.spotify.com (where the web player's ad slots actually
-    // render) and gated by the same open.spotify.com toggle as the rest of
-    // the spoof, since it ships bundled with it in the source. Ported from
-    // Spotifuck v6.9: previously this ran unconditionally on every matched
-    // host (open/www/payments) and relied only on the runtime
-    // premiumSpoofEnabledHere() check to no-op elsewhere, which still meant
-    // a live MutationObserver and repeated no-op queries on www/payments
-    // pages where these ad selectors can never match anything.
-    if (HOST_IS_OPEN) {
-        const removeAdElements = () => {
-            if (!premiumSpoofEnabledHere()) return;
-            const adSlots = document.querySelectorAll('[data-testid="ad-slot-container"], [class*="ad-"]');
-            const adButtons = document.querySelectorAll('.ButtonInner-sc-14ud5tc-0.fcsOIN');
-            if (adSlots.length || adButtons.length) {
-                dbg('removeAdElements: ad elements removed', '[data-testid="ad-slot-container"], [class*="ad-"], .ButtonInner-sc-14ud5tc-0.fcsOIN', { adSlots: adSlots.length, adButtons: adButtons.length });
+    // Full-page cover for payments.spotify.com (checkout) and the www.spotify.com plan pages. CSS hides
+    // every direct child of <body> except the back link and draws the text as body::before / body::after
+    // (flex order puts it above the link), so whatever Spotify renders underneath is covered without any
+    // scanning. CSS cannot create a link, so the link is one <a> appended to <body> once at DOMContentLoaded.
+    // No observer, no timed pass. Same www toggle as the rest of the www spoof; toggling reloads the page.
+    const COVER_BACK_CLASS = 'spf-cover-back';
+    function coverCss(headline, headlineSize, subline) {
+        return 'html{background:#121212!important}' +
+            'body{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;' +
+                'min-height:100vh!important;margin:0!important;padding:40px!important;box-sizing:border-box!important;' +
+                'background:#121212!important;color:#fff!important;text-align:center!important}' +
+            'body>*:not(.' + COVER_BACK_CLASS + '){display:none!important}' +
+            'body::before{content:"' + headline + '";order:-3;display:block;font-size:' + headlineSize + 'px;font-weight:700;margin-bottom:16px;color:#fff}' +
+            (subline ? 'body::after{content:"' + subline + '";order:-2;display:block;font-size:18px;margin-bottom:24px;color:#b3b3b3}' : '') +
+            'body>.' + COVER_BACK_CLASS + '{order:0}';
+    }
+    function installCover(c) {
+        whenHeadReady(() => {
+            const st = document.createElement('style');
+            st.id = 'spf-cover-css';
+            st.textContent = coverCss(c.headline, c.size, c.subline);
+            document.head.appendChild(st);
+            dbg(location.hostname + ' cover CSS injected', 'body > *', { action: 'display:none except .' + COVER_BACK_CLASS });
+        });
+        const addBackLink = () => {
+            if (!document.body) return;
+            if (document.querySelector('.' + COVER_BACK_CLASS)) {
+                dbg(location.hostname + ' cover back link: already present, skipped', '.' + COVER_BACK_CLASS, {});
+                return;
             }
-            adSlots.forEach(el => el.remove());
-            adButtons.forEach(el => el.remove());
+            const a = document.createElement('a');
+            a.className = COVER_BACK_CLASS;
+            a.href = 'https://open.spotify.com/';
+            a.textContent = 'Back to Spotify';
+            a.style.cssText = 'display:inline-block;padding:14px 40px;background:#1ed760;color:#000;border-radius:20px;font-weight:700;font-size:16px;text-decoration:none;cursor:pointer;';
+            document.body.appendChild(a);
+            logChange(c.page, c.was, c.now);
         };
-        const adObserver = new MutationObserver(removeAdElements);
-        adObserver.observe(document.body, { childList: true, subtree: true });
-        window.addEventListener('beforeunload', () => adObserver.disconnect());
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addBackLink, { once: true });
+        else addBackLink();
+    }
+    if (HOST_IS_PAY && premiumSpoofEnabledHere()) {
+        installCover({
+            headline: 'DONT WASTE YOUR MONEY ON SPOTIFY', size: 36,
+            subline: 'Dont give them a cent. Use Spotifuck for free.',
+            page: 'body (payments page)', was: '(original checkout page content)', now: '"DONT WASTE YOUR MONEY" cover + back link'
+        });
+    }
+    if (HOST_IS_PLAN && premiumSpoofEnabledHere()) {
+        installCover({
+            headline: 'You dont need Spotify Premium. Trust me.', size: 32, subline: null,
+            page: 'body (plan purchase page)', was: '(original plan page content)', now: '"You dont need Premium" cover + back link'
+        });
     }
 })();
+
+
+
+// Ad-slot banner removal (whole-DOM '[class*="ad-"]' rescan on every mutation) was removed:
+// it did not remove ads reliably. See the Twenty-fifth change entry.
 
 // add-new-card-button blocker for www.spotify.com's own account pages
 // (/account/payment-methods/, aliased with /account/saved-payment-cards/ -
 // same page reachable under either path). Entirely separate from the
-// payments.spotify.com checkout blocker above (BLOCK_SELECTOR inside
-// runPremium()), which is gated to that different hostname and so never
-// touches this page. No overlay here (account management, not checkout) -
+// payments.spotify.com checkout, which is on a different hostname (covered
+// by the CSS cover, see installCover()) and so never touches this page. No overlay here (account management, not checkout) -
 // just the same preventDefault/stopPropagation no-op on the button, gated
 // behind HOST_IS_WWW + premiumSpoofEnabledHere() (the www.spotify.com
 // toggle), matching everything else scoped to that host. Path-matched via
 // location.pathname.includes(...) against both known paths rather than a
 // hardcoded locale segment, since the region prefix varies per account
 // (si-en, us, mx-es, etc) and isn't always normalized to a fixed value.
-if (HOST_IS_WWW) {
+// The observer is only created on those two paths, with the www toggle on
+// (every www route is a full page load, so the path is fixed for this load).
+if (HOST_IS_WWW && premiumSpoofEnabledHere() &&
+    (location.pathname.includes('/account/payment-methods/') ||
+     location.pathname.includes('/account/saved-payment-cards/'))) {
     const blockWwwAddCardButton = () => {
         if (!premiumSpoofEnabledHere()) return;
         if (!location.pathname.includes('/account/payment-methods/') &&
@@ -1745,7 +1864,7 @@ if (HOST_IS_WWW) {
     };
     blockWwwAddCardButton();
     const wwwCardObserver = new MutationObserver(blockWwwAddCardButton);
-    wwwCardObserver.observe(document.body, { childList: true, subtree: true });
+    observeBody(wwwCardObserver, { childList: true, subtree: true });
     window.addEventListener('beforeunload', () => wwwCardObserver.disconnect());
 }
 
@@ -1893,7 +2012,7 @@ if (HOST_IS_OPEN) {
             transform: translate(-50%);
         }
     `;
-        document.head.appendChild(s);
+        whenHeadReady(() => document.head.appendChild(s));
     })();
     function syncNpBtnVisualState() {
         const npBtn = document.querySelector('.npbtn');
@@ -2016,7 +2135,7 @@ if (HOST_IS_OPEN) {
         }
         updateNpvLayoutState();
     });
-    panelGuardObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-hidden', 'inert'] });
+    observeBody(panelGuardObserver, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-hidden', 'inert'] });
 
     // On load, close it if it's already open before any authorized trigger has fired.
     setTimeout(() => {
@@ -2275,6 +2394,6 @@ if (HOST_IS_OPEN) {
                 width: 100vw !important;
             }
         `;
-        document.head.appendChild(style);
+        whenHeadReady(() => document.head.appendChild(style));
     }
 }
