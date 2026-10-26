@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotifuck Desktop
 // @namespace    https://github.com/Myst1cX/SpotiKit
-// @version      7.0.25
+// @version      7.0.26
 // @description  SpotiKit - Visual premium UI overlay for Spotify and ad banner blocking. Amoled theme. Restores the old Now Playing View button.
 // @author       kit_fogos, Myst1cX (fork)
 // @match        *://open.spotify.com/*
@@ -266,7 +266,8 @@
 // Ported Spotifuck Mobile's AMOLED pure-black CSS block (from r0/e.java line
 // 207), which had been missed until now despite everything else on this
 // list being a deliberate 1:1 port from Spotifuck. Added as its own
-// GM_addStyle call right after the existing .__sp_curr one below: overrides
+// GM_addStyle call (originally right after a small .__sp_curr badge style,
+// since removed - see the Twenty-sixth change): overrides
 // the Encore dark-theme background custom properties (--background-base,
 // --background-highlight, --background-elevated-base,
 // --background-elevated-highlight, --background-elevated-press,
@@ -298,6 +299,10 @@
 // blanket fix at the source rather than Mobile's narrower per-surface one,
 // appropriate since desktop lacks the overlay code Mobile's fix piggybacks
 // on.
+// [As of Spotifuck Mobile v7.35 the two scripts match here: Mobile carries
+// this same block with !important on all six properties, injected on every
+// matched host. The paragraph above about Mobile needing no change describes
+// Mobile as it was when this change was made.]
 // [As of the Twentieth change: this block's GM_addStyle call was replaced
 // with a plain <style>-element injection - see that entry for why.]
 
@@ -583,7 +588,8 @@
 // Removed the dependency on GM_addStyle entirely - the three CSS blocks that
 // used to call it (the .__sp_curr badge, the Eleventh change's AMOLED
 // dark-theme override, and the Eighteenth change's .npbtn active-state
-// styling) now each inject their own <style> element directly:
+// styling; the .__sp_curr badge was later deleted outright, see the
+// Twenty-sixth change) now each inject their own <style> element directly:
 // document.createElement('style'), set .textContent to the same CSS,
 // document.head.appendChild(style). This is Spotifuck Mobile's own method
 // (r0/e.java line 204 - see its injectCSS()), ported here rather than
@@ -700,10 +706,32 @@
 //   runs whether the toggle is on or off, like the /intl-xx/ strip and the account-language flip.
 // - The open.spotify.com ad-slot remover (whole-DOM rescan on every mutation, did not remove ads
 //   reliably) is gone.
+// - AMOLED pure-black theme: injected on every matched host (open, www, payments), so the www
+//   account pages are black too (at the time of this change Mobile only injected it on
+//   open.spotify.com; Mobile v7.35 now injects it on every matched host as well). The "Edit profile /
+//   Payment method" banner that replaces the Join Premium block sets its own inline background
+//   (it was #2A2A2A), so the theme variables never reached it: it is now #000 to match. If a
+//   separate non-AMOLED theme toggle is ever added, that banner must go back to #2A2A2A (see the
+//   comment at its background line in runPremium()). (The unused .__sp_curr grey pill style that
+//   used to sit next to this theme block was removed in the Twenty-sixth change.)
 // - observeBody() / whenHeadReady() (document-start safety, same as Mobile): every observer on
 //   document.body (premium, card blocker, panel guard) and every CSS injection into <head> now waits
 //   for the element to exist, so a missing <body>/<head> at document-start can no longer abort the
 //   script.
+
+// Twenty-sixth change:
+// Removed the dead .__sp_curr CSS block (the IIFE that injected a grey #535353 pill style:
+// display:inline-block, 11px/700 text, uppercase). Nothing in this script ever adds that class to an
+// element, it was a leftover - it appears only in that style definition and in comments - so the rule 
+// could never match anything, and Spotifuck Mobile never had an equivalent. No visible behavior change; 
+// one less <style> element injected into <head> on every matched host.
+// Comments touched to match: the Eleventh and Twentieth change entries and the Twenty-fifth entry's
+// AMOLED bullet no longer point at .__sp_curr as a live block, and the AMOLED block's own comment
+// carries the one-line explanation of why GM_addStyle is not used (it used to live on the removed
+// block, with the AMOLED and .npbtn comments pointing back at it as "the block above").
+// Also corrected: comments that said Mobile only injects the AMOLED theme on open.spotify.com, or that
+// Mobile gets away without !important thanks to its .YourLibraryX pin. Spotifuck Mobile v7.35 now
+// injects the same block with !important on every matched host, so the two scripts are identical here.
 
 
 // --- Per-site visual premium spoof toggles ---
@@ -853,29 +881,6 @@ if (typeof GM_registerMenuCommand === 'function') {
     const PINK = '#FFD2D7';
     const GREEN = '#1ed760';
 
-    // GM_addStyle avoided here - ported to the same raw <style>-element
-    // injection Spotifuck Mobile uses (r0/e.java line 204 pattern:
-    // document.createElement('style') + textContent + document.head.appendChild),
-    // rather than depending on GM_addStyle being defined by whatever loader
-    // runs this script.
-    (function() {
-        const s = document.createElement('style');
-        s.textContent = `
-        .__sp_curr {
-            display:inline-block;
-            background:#535353;
-            color:#fff;
-            font-size:11px;
-            font-weight:700;
-            padding:3px 8px;
-            border-radius:3px;
-            text-transform:uppercase;
-            letter-spacing:.4px;
-        }
-    `;
-        whenHeadReady(() => document.head.appendChild(s));
-    })();
-
     // AMOLED pure black mode - ported from Spotifuck Mobile (r0/e.java line 207).
     // Was missing here; the rest of SpotiwebJS ports Spotifuck 1:1 but this
     // small self-contained block got skipped. Overrides the Encore dark-theme
@@ -895,18 +900,24 @@ if (typeof GM_registerMenuCommand === 'function') {
     // bar) went black - the main container view, sidebar, and library panel
     // all stayed grey; adding !important to just these six lines - no extra
     // per-element rules needed - made every themed surface black.
-    // Mobile itself doesn't need this: its Sixth big change block already
-    // has `.YourLibraryX{background:var(--background-elevated-base)
-    // !important}`, which independently pins its library/sidebar surface
-    // against the same proximity race. SpotiwebJS has no equivalent of that
-    // block (desktop doesn't use Mobile's bottom-nav-driven library
-    // overlay), so !important on the six vars here is doing the job that
-    // rule does for Mobile - just as a blanket fix at the source instead of
-    // a narrower per-surface one.
+    // Mobile originally didn't need this on open.spotify.com: its Sixth big
+    // change block already has `.YourLibraryX{background:var(--background-
+    // elevated-base)!important}`, which independently pinned its library/
+    // sidebar surface against the same proximity race. SpotiwebJS has no
+    // equivalent of that block (desktop doesn't use Mobile's bottom-nav-driven
+    // library overlay), so !important on the six vars here does that job as a
+    // blanket fix at the source. Spotifuck Mobile v7.35 now carries this exact
+    // block too (!important on all six, injected on every matched host), so
+    // the two scripts match.
     // (An earlier version of this block also force-set
     // #Desktop_LeftSidebar_Id/.YourLibraryX directly as a belt-and-suspenders
     // measure; removed since !important alone was sufficient.)
-    // GM_addStyle avoided here too, same reason/pattern as the block above.
+    // GM_addStyle avoided - ported to the same raw <style>-element injection
+    // Spotifuck Mobile uses (r0/e.java line 204 pattern: document.createElement
+    // ('style') + textContent + document.head.appendChild), rather than
+    // depending on GM_addStyle being defined by whatever loader runs this
+    // script. The .npbtn block further down follows the same pattern.
+    // Injected on every matched host (open, www, payments), so the www account pages are black too.
     (function() {
         const s = document.createElement('style');
         s.textContent = `
@@ -1596,10 +1607,11 @@ if (typeof GM_registerMenuCommand === 'function') {
             }
 
 
+            // AMOLED: the background below is black to match the theme. A future non-AMOLED theme must restore #2A2A2A here.
             premiumBanner.style.cssText += `
                 display:flex !important;
                 flex-direction:row !important;
-                background:#2A2A2A !important;
+                background:#000 !important;
                 cursor:default !important;
                 padding:0 !important;
                 border-radius:8px !important;
@@ -1980,7 +1992,7 @@ if (HOST_IS_OPEN) {
     // `.npbtn:not(.active)` rules below are the Eighteenth change entry's
     // property-override defense, replacing SPOTIFY_LYBTN_STATE_CLASSES - see
     // that entry above for the full reasoning.
-    // GM_addStyle avoided here too, same reason/pattern as the two blocks above.
+    // GM_addStyle avoided here too, same reason/pattern as the AMOLED block near the top of this file.
     (function() {
         const s = document.createElement('style');
         s.textContent = `
