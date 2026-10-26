@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotifuck Desktop
 // @namespace    https://github.com/Myst1cX/SpotiKit
-// @version      7.0.27
+// @version      7.0.28
 // @description  SpotiKit - Visual premium UI overlay for Spotify and ad banner blocking. Amoled theme. Restores the old Now Playing View button.
 // @author       kit_fogos, Myst1cX (fork)
 // @match        *://open.spotify.com/*
@@ -750,6 +750,45 @@
 // Correction to an earlier claim: the Eleventh-change comments imply every themed surface goes black once
 // the six variables carry !important. That holds for surfaces that read those variables, not for this one.
 
+// Twenty-eighth change:
+// dbg() coverage pass for CSS. The Seventh, Ninth (c) and Thirteenth change audits covered click handlers,
+// menu commands and state-changing functions, but never the <style> injections or the class toggles that
+// switch CSS on and off, so those could change the page with nothing in the SPFDBG output. Every gap found
+// now logs through dbg() (same Debug Logging toggle and app log as everything else). No behavior change.
+// a) The three static <style> blocks now log once when appended to <head>, with the block's size in bytes:
+//    the AMOLED block ('AMOLED CSS injected', which also reports location.hostname since it is injected on
+//    every matched host), the .npbtn block ('.npbtn CSS injected') and the native-toggle-hiding block
+//    ('native-toggle-hide CSS injected', styleId 'npv-guard-hide-native-toggle-style', scope
+//    html:not(.fuckd-panel-open)). The open.spotify.com spoof CSS and the payments/www cover CSS already
+//    logged on injection and are untouched.
+// b) updateNpvLayoutState() logs 'html.fuckd-panel-open added/removed', with which state the native-toggle
+//    100vw / --panel-gap crop rules are now in (off while any panel is open, armed while closed). That
+//    class is the switch for the whole squeeze, so it was the one CSS state change worth seeing and it had
+//    no trace. It logs only when the class actually changes, not on every call, because panelGuardObserver
+//    calls this function from its mutation callback, which fires on every DOM change under <body>.
+// c) syncNpBtnVisualState() logs 'npBtn .active added/removed', again only when the state flips.
+// d) setupNpvButton() logs when the native lyrics button is tagged fuckd-npv (once per button, since the
+//    selector skips tagged ones).
+// e) The www.spotify.com plan-card restyle in runPremium() (position:relative + logo + message) now records
+//    itself through logChange(), like every other swap that function makes, so it also appears in the
+//    "Show everything replaced so far" table.
+// f) Three runPremium() lookups use Spotify's generated styled-components class names, which change on any
+//    deploy, and each was guarded by a bare if, so a stale one failed silently: the title's parent card
+//    ([class*="Hjkjj"], the pink card background), the plan card's button row ([class*="dCZPlm"] /
+//    .sc-3b07dd39-3, the anchor for the "NEVER expires" message) and the Edit profile banner's wrapper
+//    (.sc-dad329a7-0 / [class*="dad329a7"], its width:100%). Each miss now logs 'selector MISS (outdated?)'
+//    with the selector and the page path. The plan-card and banner lookups sit inside once-per-element
+//    blocks, so they log once; the title loop runs on every pass, so it marks the title element
+//    (data-sp-miss-logged) to log once per element. All three still matched when tested; the logs
+//    only fire when one stops matching.
+// Deliberately still unlogged: the "target not found yet" early returns of the polling setup functions
+// (Ninth change (c) explains why) and the hidden /preferences iframe's display:none (plumbing, not a visual
+// change).
+// Also checked: a scan of this script's code for Spanish terms and accented text found no leftover
+// non-English matchers (the text/aria matchers are 'Premium Plans' and 'Connect to a device'). The one such
+// leftover in Spotifuck Mobile, an "Inicio" selector, is removed in its v7.37.
+// Net: 9 new dbg() calls, plus one logChange(). Spotifuck Mobile v7.37 carries the same pass.
+
 
 // --- Per-site visual premium spoof toggles ---
 // Declared at module scope (not inside either IIFE below) because both the
@@ -962,7 +1001,7 @@ if (typeof GM_registerMenuCommand === 'function') {
             background: #000 !important;
         }
     `;
-        whenHeadReady(() => document.head.appendChild(s));
+        whenHeadReady(() => { document.head.appendChild(s); dbg('AMOLED CSS injected', '.encore-dark-theme, aside[data-testid=now-playing-bar], #context-menu ul[role="menu"]', { bytes: s.textContent.length, host: location.hostname }); });
     })();
 
     const REPLACE = {
@@ -1509,6 +1548,9 @@ if (typeof GM_registerMenuCommand === 'function') {
                 if (parent) {
                     parent.style.background = PINK;
                     parent.style.color = '#000';
+                } else if (!el.dataset.spMissLogged) {
+                    el.dataset.spMissLogged = '1';
+                    dbg('selector MISS (outdated?): Premium Individual card parent not found, card background not restyled', '[class*="Hjkjj"], [class*="hjkjj"]', { page: location.pathname });
                 }
             }
         });
@@ -1516,6 +1558,7 @@ if (typeof GM_registerMenuCommand === 'function') {
         const planCard = document.querySelector('[data-testid="plan-card"]');
         if (planCard && !planCard.querySelector('.__sp_logo')) {
             planCard.style.position = 'relative';
+            logChange('[data-testid="plan-card"]', 'plan card', '(position:relative + logo + message injected)');
             const logo = document.createElement('img');
             logo.className = '__sp_logo';
             logo.src = 'https://i.ibb.co/jPMD5S3K/3-sin-t-tulo-20260704011012.png';
@@ -1527,6 +1570,7 @@ if (typeof GM_registerMenuCommand === 'function') {
             msg.style.cssText = 'color:#B3B3B3;font-size:14px;margin:8px 0;text-align:left;line-height:1.4;padding:0 4px;';
             const btnRow = planCard.querySelector('[class*="dCZPlm"], .sc-3b07dd39-3');
             if (btnRow) btnRow.parentNode.insertBefore(msg, btnRow);
+            else dbg('selector MISS (outdated?): plan-card button row not found, "NEVER expires" message not inserted', '[class*="dCZPlm"], .sc-3b07dd39-3', { page: location.pathname });
         }
 
         document.querySelectorAll('h1, h2, h3, h4, strong, span, div[class*="plan"], div[class*="Plan"]').forEach(el => {
@@ -1631,6 +1675,8 @@ if (typeof GM_registerMenuCommand === 'function') {
             const wrapper = premiumBanner.closest('.sc-dad329a7-0, [class*="dad329a7"]');
             if (wrapper) {
                 wrapper.style.width = '100%';
+            } else {
+                dbg('selector MISS (outdated?): banner wrapper not found, banner width not set to 100%', '.sc-dad329a7-0, [class*="dad329a7"]', { page: location.pathname });
             }
 
 
@@ -2051,12 +2097,14 @@ if (HOST_IS_OPEN) {
             transform: translate(-50%);
         }
     `;
-        whenHeadReady(() => document.head.appendChild(s));
+        whenHeadReady(() => { document.head.appendChild(s); dbg('.npbtn CSS injected', '.npbtn', { bytes: s.textContent.length }); });
     })();
     function syncNpBtnVisualState() {
         const npBtn = document.querySelector('.npbtn');
         if (!npBtn) return;
-        npBtn.classList.toggle('active', userOpenedNPV);
+        const wasActive = npBtn.classList.contains('active');
+        npBtn.classList.toggle('active', !!userOpenedNPV);
+        if (wasActive !== !!userOpenedNPV) dbg('npBtn .active ' + (userOpenedNPV ? 'added' : 'removed'), '.npbtn', { userOpenedNPV: !!userOpenedNPV });
     }
 
     // Same shared-container pattern as isNpvOpen() above, checking the container's own
@@ -2195,6 +2243,7 @@ if (HOST_IS_OPEN) {
         const lyBtn = document.querySelector('button[data-testid="lyrics-button"]:not(.fuckd-npv)');
         if (!lyBtn) return;
         lyBtn.classList.add('fuckd-npv');
+        dbg('lyrics button tagged fuckd-npv (npBtn about to be inserted)', 'button[data-testid="lyrics-button"]');
 
         const npBtn = document.createElement('button');
         // Clone lyBtn's own classes (Spotify's real Encore button classes) so npBtn
@@ -2379,7 +2428,10 @@ if (HOST_IS_OPEN) {
         return !panelContainer.closest('[inert]');
     }
     function updateNpvLayoutState() {
-        document.documentElement.classList.toggle('fuckd-panel-open', isAnyPanelOpen());
+        const panelOpen = isAnyPanelOpen();
+        const hadPanelClass = document.documentElement.classList.contains('fuckd-panel-open');
+        document.documentElement.classList.toggle('fuckd-panel-open', panelOpen);
+        if (panelOpen !== hadPanelClass) dbg('html.fuckd-panel-open ' + (panelOpen ? 'added' : 'removed'), 'html', { panelOpen, effect: panelOpen ? 'native-toggle 100vw/--panel-gap crop rules OFF' : 'native-toggle crop rules ARMED' });
         syncNpBtnVisualState();
     }
     updateNpvLayoutState(); // reflect default (closed) state before the panel even exists
@@ -2433,6 +2485,6 @@ if (HOST_IS_OPEN) {
                 width: 100vw !important;
             }
         `;
-        whenHeadReady(() => document.head.appendChild(style));
+        whenHeadReady(() => { document.head.appendChild(style); dbg('native-toggle-hide CSS injected', '#' + styleId, { bytes: style.textContent.length, scope: 'html:not(.fuckd-panel-open)' }); });
     }
 }
