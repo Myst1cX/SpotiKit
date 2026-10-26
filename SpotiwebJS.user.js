@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Spotifuck Desktop
 // @namespace    https://github.com/Myst1cX/SpotiKit
-// @version      7.0.26
+// @version      7.0.27
 // @description  SpotiKit - Visual premium UI overlay for Spotify and ad banner blocking. Amoled theme. Restores the old Now Playing View button.
 // @author       kit_fogos, Myst1cX (fork)
 // @match        *://open.spotify.com/*
@@ -722,9 +722,9 @@
 // Twenty-sixth change:
 // Removed the dead .__sp_curr CSS block (the IIFE that injected a grey #535353 pill style:
 // display:inline-block, 11px/700 text, uppercase). Nothing in this script ever adds that class to an
-// element, it was a leftover - it appears only in that style definition and in comments - so the rule 
-// could never match anything, and Spotifuck Mobile never had an equivalent. No visible behavior change; 
-// one less <style> element injected into <head> on every matched host.
+// element - it appears only in that style definition and in comments - so the rule could never match
+// anything, and Spotifuck Mobile never had an equivalent. No visible behavior change; one less
+// <style> element injected into <head> on every matched host.
 // Comments touched to match: the Eleventh and Twentieth change entries and the Twenty-fifth entry's
 // AMOLED bullet no longer point at .__sp_curr as a live block, and the AMOLED block's own comment
 // carries the one-line explanation of why GM_addStyle is not used (it used to live on the removed
@@ -732,6 +732,23 @@
 // Also corrected: comments that said Mobile only injects the AMOLED theme on open.spotify.com, or that
 // Mobile gets away without !important thanks to its .YourLibraryX pin. Spotifuck Mobile v7.35 now
 // injects the same block with !important on every matched host, so the two scripts are identical here.
+
+// Twenty-seventh change:
+// The menu opened by the avatar (user widget) button on open.spotify.com was never made AMOLED. A
+// DevTools ancestor dump plus the menu's HTML showed the panel is a <ul role="menu"
+// class="encore-dark-theme ..."> inside div[data-testid=user-widget-menu] inside div#context-menu inside
+// a tippy root, with
+// --background-elevated-base resolving to #000 (so the Eleventh change's variables do reach it) while the
+// <ul> itself still painted rgb(40,40,40), i.e. #282828. So its background does not come from any of the
+// six overridden variables (a hardcoded value or a token we don't override), and more variable
+// overrides cannot fix it. Added `#context-menu ul[role="menu"]{background:#000!important}` to the
+// AMOLED block, keyed on the stable #context-menu id and role instead of the hashed class on the <ul>.
+// #context-menu also hosts other context menus, which the rule covers too, but only the avatar menu was
+// inspected. The selector only matches on open.spotify.com (no
+// #context-menu on www / payments), so the shared all-host block needs no gating. Spotifuck Mobile v7.36
+// carries the same rule.
+// Correction to an earlier claim: the Eleventh-change comments imply every themed surface goes black once
+// the six variables carry !important. That holds for surfaces that read those variables, not for this one.
 
 
 // --- Per-site visual premium spoof toggles ---
@@ -912,6 +929,13 @@ if (typeof GM_registerMenuCommand === 'function') {
     // (An earlier version of this block also force-set
     // #Desktop_LeftSidebar_Id/.YourLibraryX directly as a belt-and-suspenders
     // measure; removed since !important alone was sufficient.)
+    // #context-menu ul[role="menu"] (Twenty-seventh change): the avatar/user menu is a
+    // <ul role="menu" class="encore-dark-theme ..."> inside div[data-testid=user-widget-menu] inside div#context-menu
+    // inside a tippy root. Its --background-elevated-base already resolves to #000, yet the <ul> measured
+    // rgb(40,40,40) (#282828) - so it does not take its background from any of the six variables above, and no
+    // variable override can reach it. The rule pins the <ul> directly by the stable #context-menu id plus
+    // role="menu" (never its hashed class). #context-menu also hosts other context menus, which this rule
+    // covers too, but only the avatar menu has been inspected.
     // GM_addStyle avoided - ported to the same raw <style>-element injection
     // Spotifuck Mobile uses (r0/e.java line 204 pattern: document.createElement
     // ('style') + textContent + document.head.appendChild), rather than
@@ -933,6 +957,9 @@ if (typeof GM_registerMenuCommand === 'function') {
             background: #000 !important;
             box-shadow: none;
             border-top: 1px solid #666;
+        }
+        #context-menu ul[role="menu"] {
+            background: #000 !important;
         }
     `;
         whenHeadReady(() => document.head.appendChild(s));
