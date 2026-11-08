@@ -2,7 +2,7 @@
 // @name         Spotifuck Desktop
 // @namespace    https://github.com/Myst1cX/SpotiKit
 // @version      7.0.28
-// @description  SpotiKit - Visual premium UI overlay for Spotify and ad banner blocking. Amoled theme. Restores the old Now Playing View button.
+// @description  SpotiKit - Visual premium UI overlay for Spotify. Forces English. Amoled theme. Restores the old Now Playing View button (with Queue/Connect panel guard).
 // @author       kit_fogos, Myst1cX (fork)
 // @match        *://open.spotify.com/*
 // @match        *://www.spotify.com/*
