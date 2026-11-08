@@ -2,7 +2,7 @@
 
 _Applies to script version **7.0.28**._
 
-A desktop-layout userscript for the Spotify Web Player: spoofs Spotify Premium visually, forces the player to render in English, restores a real "Now Playing View" toggle button with its own guard system, and adds a pure-black AMOLED theme. No mobile-layout changes.  Works on desktop or on an actual phone browser if you just prefer the desktop-style layout. It's also the script the Spotifuck Spotify Web app loads when its Spotifuck Mode is switched off (see [Spotify Web app integration](#spotify-web-app-integration-windowandbridge)).
+A desktop-layout userscript for the Spotify Web Player: spoofs Spotify Premium visually, forces the player to render in English, restores a real "Now Playing View" toggle button with its own guard system, and adds a pure-black AMOLED theme. No mobile-layout changes.  Works on desktop or on an actual phone browser if you just prefer the desktop-style layout. It's also the script the Spotify Web app loads when its Spotifuck Mode is switched off (see [Spotify Web app integration](#spotify-web-app-integration-windowandbridge)).
 
 > **Recommended userscript manager:** [Violentmonkey](https://violentmonkey.github.io/) or [Tampermonkey](https://www.tampermonkey.net/)    
 > Want a mobile-layout version instead?    
@@ -69,7 +69,7 @@ Nothing here does a blind full-page walk on a timer. `open.spotify.com` and `pay
 
 ### Spotify Web app integration (`window.AndBridge`)
 
-The same script runs inside the Spotifuck Spotify Web Android app's WebView: the app loads SpotiwebJS (shown as "Spotifuck Desktop") instead of Spotifuck Mobile when its Spotifuck Mode is switched off (app 1.25+). The script detects the app by the presence of `window.AndBridge` (Force English specifically checks that `AndBridge.isLoggedIn` is a function), an object that only exists there (never in a normal browser or userscript manager). Each bridge method is feature-detected, so an older app just falls back to the browser behavior. What the two do together:
+The same script runs inside the Spotify Web app's WebView: the app loads SpotiwebJS (shown as "Spotifuck Desktop") instead of Spotifuck Mobile when its Spotifuck Mode is switched off (app 1.25+). The script detects the app by the presence of `window.AndBridge` (Force English specifically checks that `AndBridge.isLoggedIn` is a function), an object that only exists there (never in a normal browser or userscript manager). Each bridge method is feature-detected, so an older app just falls back to the browser behavior. What the two do together:
 
 - **Force English:** the app already forces an English locale natively (`Accept-Language: en` on every request), so the `navigator.language` spoof is skipped. The `www.spotify.com` region-path redirect (kept as a harmless safety net) and the account-language flip still run, which also stops the interface language from being switched away from English, since the script's selectors depend on English labels.
 - **Debug logging:** when the app's Settings > Debug Logging is on (app 1.52+), `dbg()` lines are also forwarded through `AndBridge.dbgt` under the tag `us.SpotiwebJS` and show up in the app's Logger (filter by that tag or pick the Spotifuck Desktop source). Nothing is stored while it's off.
